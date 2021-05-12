@@ -79,7 +79,7 @@ tasks {
         duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 
         manifest {
-            attributes("Main-Class" to "orienteering.main.MainKt")
+            attributes("Main-Class" to "top.main.MainKt")
         }
 
         val sourcesMain = sourceSets.main.get()
@@ -152,5 +152,5 @@ fun printResults(desc: TestDescriptor, result: TestResult) {
 
 application {
     // Define the main class for the application.
-    mainClassName = "top.main.MainKt"
+    mainClass.set("top.main.MainKt")
 }
