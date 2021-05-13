@@ -34,8 +34,8 @@ data class Coords(val x: Double, val y: Double)
 */
 
 class InstanceBuilder(
-    private val name: String,
-    private val path: String
+    name: String,
+    path: String
 )
 {
 
