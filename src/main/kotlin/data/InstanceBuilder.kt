@@ -33,6 +33,14 @@ data class Coords(val x: Double, val y: Double)
  TODO: Determine what parameters need to be stored for each instance
 */
 
+/**
+ * Class the builds the instance object using information for a local .txt file.
+ *
+ * @param name String: Name of file including the .txt extension
+ * @param path String: Local path of the folder containing the .txt file
+ * @constructor Creates a new problem instance with the data extracted from the .txt file
+ */
+
 class InstanceBuilder(
     name: String,
     path: String
