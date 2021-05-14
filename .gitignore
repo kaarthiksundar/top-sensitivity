@@ -18,5 +18,6 @@ build
 # Ignore pycache
 final-results/__pycache__/
 
+build.gradle.kts
 
 .DS_Store
