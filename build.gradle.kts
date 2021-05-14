@@ -60,7 +60,6 @@ dependencies {
 
 tasks {
     dokka {
-        outputFormat = "javadoc"
         outputDirectory = "$buildDir/javadoc"
         configuration {
             includeNonPublic = true
