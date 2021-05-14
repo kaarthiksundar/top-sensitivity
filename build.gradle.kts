@@ -46,8 +46,8 @@ dependencies {
 
     // use JGraphT library
     implementation("org.jgrapht:jgrapht-core:1.5.0")
-
-    val cplexJarPath: String by project
+    val cplexJarPath = "C:\\Program Files\\IBM\\ILOG\\CPLEX_Studio_Community129\\cplex\\lib\\cplex.jar"
+    //val cplexJarPath: String by project
     implementation(files(cplexJarPath))
 
     // Use the Kotlin JUnit integration.
@@ -99,7 +99,8 @@ tasks {
     }
 
     withType<JavaExec> {
-        val cplexLibPath: String by project
+        //val cplexLibPath: String by project
+        val cplexLibPath = "C:\\Program Files\\IBM\\ILOG\\CPLEX_Studio_Community129\\cplex\\bin\\x64_win64\\"
         jvmArgs = listOf(
             "-Xms32m",
             "-Xmx22g",
@@ -108,7 +109,8 @@ tasks {
     }
 
     withType<Test> {
-        val cplexLibPath: String by project
+        //val cplexLibPath: String by project
+        val cplexLibPath = "C:\\Program Files\\IBM\\ILOG\\CPLEX_Studio_Community129\\cplex\\bin\\x64_win64\\"
         jvmArgs = listOf(
             "-Xms32m",
             "-Xmx22g",
