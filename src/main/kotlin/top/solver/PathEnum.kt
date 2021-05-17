@@ -13,7 +13,7 @@ data class Label(val currentNode: Int,
 data class FeasiblePath(val path: List<Int>, val totalPrize: Double, val pathLength: Double)
 
 
-fun enumerateAllPathsWithinBudget(instance: Instance)
+fun enumerateAllPathsWithinBudget(instance: Instance) : MutableList<FeasiblePath>
 {
     val graph: SetGraph = instance.graph
 
@@ -131,6 +131,7 @@ fun enumerateAllPathsWithinBudget(instance: Instance)
         All feasible paths have been found.
      */
 
+    return feasiblePathList
 }
 
 fun findPath(label: Label, labelsMap: MutableMap<Int, Label>) : List<Int>{
