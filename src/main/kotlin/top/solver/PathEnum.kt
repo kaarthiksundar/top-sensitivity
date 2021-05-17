@@ -34,7 +34,7 @@ fun enumerateAllPathsWithinBudget(instance: Instance) : List<FeasiblePath>
 
         The initial Label corresponding to the vehicle starting at the depot will be given the index value 0.
      */
-    val labelsMap = mutableMapOf<Int, Label>(0 to initialLabel)
+    val labelsMap = mutableMapOf(0 to initialLabel)
 
     /*
         Mutable list of labels that need to be treated (i.e., checked for feasible extensions and then remove
