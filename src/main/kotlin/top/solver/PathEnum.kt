@@ -34,16 +34,17 @@ data class FeasiblePath(val path: List<Int>, val totalPrize: Double, val pathLen
 /**
  * Function for enumerating all feasible paths for a single vehicle. The paths are feasible in the sense that the path
  * does not visit any node more than once and the total path length is less than a budget. The budget is contained
- * within [Instance] object [instance].
+ * within an [Instance] object and can be accessed as [Instance.budget].
  *
- * Returns a list of [FeasiblePath] objects corresponding to the feasible paths in the graph.
+ * @return Returns a list of [FeasiblePath] objects corresponding to the feasible paths in [Instance.graph]. The
+ * list of [FeasiblePath] objects is sorted in decreasing order of the total prize collected.
  *
  */
 fun enumerateAllPathsWithinBudget(instance: Instance) : List<FeasiblePath>
 {
     val graph: SetGraph = instance.graph
 
-    /*
+    /**
         Creating the Label corresponding to the vehicle beginning at the source node.
 
         The predecessor index for the initial label is set to -1 to indicate there is no predecessor.
@@ -55,27 +56,27 @@ fun enumerateAllPathsWithinBudget(instance: Instance) : List<FeasiblePath>
                                 labelIndex = 0,
                                 predecessorIndex = -1)
     var maxLabelIndex = 0
-    /*
+    /**
         Mutable map for tracking which label is associated with a specific integer index value.
 
         The initial Label corresponding to the vehicle starting at the depot will be given the index value 0.
      */
     val labelsMap = mutableMapOf(0 to initialLabel)
 
-    /*
+    /**
         Mutable list of labels that need to be treated (i.e., checked for feasible extensions and then remove
         from the mutable list)
      */
     val untreatedLabels = mutableListOf(initialLabel)
 
-    /*
+    /**
         Mutable list of all feasible paths.
      */
     val feasiblePathList = mutableListOf<FeasiblePath>()
 
     while (untreatedLabels.isNotEmpty())
     {
-        /*
+        /**
             While the list of untreated labels is not empty, iteratively treat the last label. If feasible extensions
             are found, new labels are appended to the untreated labels list.
          */
@@ -83,7 +84,7 @@ fun enumerateAllPathsWithinBudget(instance: Instance) : List<FeasiblePath>
         // Label to be treated
         val currentLabel: Label = untreatedLabels.last()
 
-        /*
+        /**
             Checking if the current label is already at the destination. If so, remove from the untreated labels list
             and select a new label to treat
          */
@@ -111,7 +112,7 @@ fun enumerateAllPathsWithinBudget(instance: Instance) : List<FeasiblePath>
             // Removing current label from untreated label list
             untreatedLabels.removeLast()
 
-            /*
+            /**
                 Current label to be treated is not yet at the destination.
              */
 
@@ -153,24 +154,27 @@ fun enumerateAllPathsWithinBudget(instance: Instance) : List<FeasiblePath>
         }
     }
 
-    /*
+    /**
         All feasible paths have been found.
      */
 
     return feasiblePathList.sortedWith(compareBy{it.totalPrize}).reversed()
 }
 
+/**
+ * Function for finding the path taken to reach a given [Label].
+ *
+ * @param label [Label] the path is to be determined for
+ * @param labelsMap Mapping of label indices to labels
+ *
+ * @return List of nodes visited corresponding to the path taken for a given [Label]
+ */
 fun findPath(label: Label, labelsMap: MutableMap<Int, Label>) : List<Int>{
 
-    /*
-        Backtracking from the current label until the initial label in order to construct the path taken.
-     */
-
     var currentLabel = label
-
     val path = mutableListOf<Int>()
 
-    /*
+    /**
         Looping while the current label considered isn't the initial label.
      */
     while (currentLabel.predecessorIndex != -1)
@@ -183,7 +187,9 @@ fun findPath(label: Label, labelsMap: MutableMap<Int, Label>) : List<Int>{
     // Adding the source node from the initial label
     path.add(currentLabel.currentNode)
 
-    // Path is in reverse order, so reverse the list.
+    /**
+     * Path is in reverse order, so reverse the list.
+     */
     path.reverse()
 
     return path
