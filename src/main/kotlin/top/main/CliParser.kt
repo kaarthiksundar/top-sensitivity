@@ -5,18 +5,14 @@ import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.validate
 import com.github.ajalt.clikt.parameters.types.int
-import mu.KLogging
+import mu.KotlinLogging
 
+private val log = KotlinLogging.logger {}
 /**
  * Class for parsing the command line arguments
  */
 
 class CliParser : CliktCommand() {
-
-    /**
-     * Logger object.
-     */
-    //companion object : KLogging()   // Still not entirely sure how this works
 
     /**
      * Name of the file containing the instance including the .txt extension.
@@ -55,7 +51,7 @@ class CliParser : CliktCommand() {
     }
 
     override fun run() {
-        println("Start")
+        log.debug("reading command line arguments...")
     }
 
 

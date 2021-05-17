@@ -1,5 +1,19 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
+application {
+    // Define the main class for the application.
+    mainClassName = "top.main.MainKt"
+//    val cplexLibPath: String by project
+    val cplexLibPath = "/Users/kaarthik/Applications/CPLEX_Studio1210/cplex/bin/x86-64_osx"
+//    val cplexLibPath = "C:\\Program Files\\IBM\\ILOG\\CPLEX_Studio_Community129\\cplex\\bin\\x64_win64\\"
+    println("CPLEX Lib Path: $cplexLibPath")
+    applicationDefaultJvmArgs = listOf(
+        "-Xms2g",
+        "-Xmx6g",
+        "-Djava.library.path=$cplexLibPath"
+    )
+}
+
 plugins {
     // Apply the Kotlin JVM plugin to add support for Kotlin on the JVM.
     kotlin("jvm") version "1.4.21"
@@ -9,6 +23,9 @@ plugins {
 
     // Documentation plugin
     id("org.jetbrains.dokka") version "0.10.0"
+
+    // Fat JAR plugin
+    id("com.github.johnrengelman.shadow") version "6.1.0"
 }
 
 repositories {
@@ -46,8 +63,11 @@ dependencies {
 
     // use JGraphT library
     implementation("org.jgrapht:jgrapht-core:1.5.0")
-    val cplexJarPath = "C:\\Program Files\\IBM\\ILOG\\CPLEX_Studio_Community129\\cplex\\lib\\cplex.jar"
-    //val cplexJarPath: String by project
+
+//    val cplexJarPath: String by project
+    val cplexJarPath = "/Users/kaarthik/Applications/CPLEX_Studio1210/cplex/lib/cplex.jar"
+//    val cplexJarPath = "C:\\Program Files\\IBM\\ILOG\\CPLEX_Studio_Community129\\cplex\\lib\\cplex.jar"
+    println("CPLEX JAR Path: $cplexJarPath")
     implementation(files(cplexJarPath))
 
     // Use the Kotlin JUnit integration.
@@ -73,49 +93,13 @@ tasks {
         })
     }
 
-    register<Jar>("uberJar") {
-        archiveFileName.set("uber.jar")
-        duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-
-        manifest {
-            attributes("Main-Class" to "top.main.MainKt")
-        }
-
-        val sourcesMain = sourceSets.main.get()
-        sourcesMain.allSource.forEach { println("add from sources: ${it.name}") }
-        from(sourceSets.main.get().output)
-
-        dependsOn(configurations.runtimeClasspath)
-        from(configurations.runtimeClasspath.get()
-            .onEach { println("add from dependencies: ${it.name}") }
-            .map { if (it.isDirectory) it else zipTree(it) })
-    }
-
     withType<KotlinCompile> {
         kotlinOptions {
             jvmTarget = JavaVersion.VERSION_11.toString()
         }
     }
 
-    withType<JavaExec> {
-        //val cplexLibPath: String by project
-        val cplexLibPath = "C:\\Program Files\\IBM\\ILOG\\CPLEX_Studio_Community129\\cplex\\bin\\x64_win64\\"
-        jvmArgs = listOf(
-            "-Xms32m",
-            "-Xmx22g",
-            "-Djava.library.path=$cplexLibPath"
-        )
-    }
-
     withType<Test> {
-        //val cplexLibPath: String by project
-        val cplexLibPath = "C:\\Program Files\\IBM\\ILOG\\CPLEX_Studio_Community129\\cplex\\bin\\x64_win64\\"
-        jvmArgs = listOf(
-            "-Xms32m",
-            "-Xmx22g",
-            "-Djava.library.path=$cplexLibPath"
-        )
-
         testLogging {
             showStandardStreams = true
         }
@@ -149,9 +133,4 @@ fun printResults(desc: TestDescriptor, result: TestResult) {
         println(testResultLine)
         println(separationLine)
     }
-}
-
-application {
-    // Define the main class for the application.
-    mainClass.set("top.main.MainKt")
 }
