@@ -109,20 +109,42 @@ fun enumerateAllPathsWithinBudget(instance: Instance)
                     }
                 }
             }
-
-
         }
-
-
-
-
     }
 
     /*
-        All feasible paths have been found. Creating a list of these paths.
+        All feasible paths have been found. Creating a list of FeasiblePath objects.
      */
 
+}
 
+fun findPath(label: Label, labelsMap: MutableMap<Int, Label>) : List<Int>{
+
+    /*
+        Backtracking from the current label until the initial label in order to construct the path taken.
+     */
+
+    var currentLabel = label
+
+    val path = mutableListOf<Int>()
+
+    /*
+        Looping while the current label considered isn't the initial label.
+     */
+    while (currentLabel.predecessorIndex != -1)
+    {
+        path.add(currentLabel.currentNode)
+
+        currentLabel = labelsMap[currentLabel.predecessorIndex]!!
+    }
+
+    // Adding the source node from the initial label
+    path.add(currentLabel.currentNode)
+
+    // Path is in reverse order, so reverse the list.
+    path.reverse()
+
+    return path
 }
 
 
