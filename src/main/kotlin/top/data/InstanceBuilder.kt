@@ -1,10 +1,12 @@
 package top.data
 
-import mu.KLogging
+import mu.KotlinLogging
 import org.jgrapht.graph.DefaultWeightedEdge
 import top.main.SetGraph
 import java.io.File
 import kotlin.math.sqrt
+
+private val log = KotlinLogging.logger {}
 
 /**
  * Class to hold coordinates
@@ -47,7 +49,7 @@ class InstanceBuilder(
     private val destination = vertexCoords.size - 1
     private val graph = SetGraph(DefaultWeightedEdge::class.java)
 
-    companion object : KLogging() {
+    companion object {
         /**
          * Builds Coords objects from a String containing coordinates and score.
          *
@@ -86,6 +88,7 @@ class InstanceBuilder(
             scores = scores,
             budget = budget
         )
+        log.info("instance created")
     }
 
     private fun createGraph() {

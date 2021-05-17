@@ -15,8 +15,7 @@ fun main(args: Array<String>) {
     val instance = InstanceBuilder(
         name = parameters.instanceName,
         path = parameters.instancePath
-    )
-    log.info("instance created")
+    ).getInstance()
 }
 
 fun parseArgs(args: Array<String>) : Parameters {
