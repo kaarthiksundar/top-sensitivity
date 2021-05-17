@@ -3,6 +3,17 @@ package top.solver
 import top.data.Instance
 import top.main.SetGraph
 
+/**
+ * Data class for constructing labels. These labels are used to enumerate all feasible paths in the graph.
+ *
+ * @param currentNode Current node the vehicle is located after taking some path
+ * @param collectedPrize Sum of the prizes collected by the vehicle along some path to [currentNode]
+ * @param pathLength Length of the path taken by the vehicle to [currentNode]
+ * @param visitedNodes List of nodes that have been visited by the vehicle along the path taken
+ * @param labelIndex Integer identifier of the label
+ * @param predecessorIndex Integer identifier of the preceding label used to generate the current label through a
+ * feasible extension.
+ */
 data class Label(val currentNode: Int,
                  val collectedPrize: Double,
                  val pathLength: Double,
@@ -10,9 +21,24 @@ data class Label(val currentNode: Int,
                  val labelIndex: Int,
                  val predecessorIndex: Int)
 
+/**
+ * Data class for storing a feasible path and its corresponding total prize and path length.
+ *
+ * @param path List of nodes that have been visited in chronological order
+ * @param totalPrize Sum of the prizes collected by the vehicle after taking [path]
+ * @param pathLength Distance traveled/time elapsed along [path]
+ */
 data class FeasiblePath(val path: List<Int>, val totalPrize: Double, val pathLength: Double)
 
 
+/**
+ * Function for enumerating all feasible paths for a single vehicle. The paths are feasible in the sense that the path
+ * does not visit any node more than once and the total path length is less than a budget. The budget is contained
+ * within [Instance] object [instance].
+ *
+ * Returns a list of [FeasiblePath] objects corresponding to the feasible paths in the graph.
+ *
+ */
 fun enumerateAllPathsWithinBudget(instance: Instance) : List<FeasiblePath>
 {
     val graph: SetGraph = instance.graph
