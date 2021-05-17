@@ -35,13 +35,17 @@ fun enumerateAllPathsWithinBudget(instance: Instance)
         The initial Label corresponding to the vehicle starting at the depot will be given the index value 0.
      */
     val labelsMap = mutableMapOf<Int, Label>(0 to initialLabel)
-    val labelsReachingDestination = mutableMapOf<Int, Label>()
 
     /*
         Mutable list of labels that need to be treated (i.e., checked for feasible extensions and then remove
         from the mutable list)
      */
     val untreatedLabels = mutableListOf(initialLabel)
+
+    /*
+        Mutable list of all feasible paths.
+     */
+    val feasiblePathList = mutableListOf<FeasiblePath>()
 
     while (untreatedLabels.isNotEmpty())
     {
@@ -60,8 +64,19 @@ fun enumerateAllPathsWithinBudget(instance: Instance)
 
         if (currentLabel.currentNode == instance.destination)
         {
+            // Current label does not need to be further extended, so remove from untreated label list.
             untreatedLabels.removeLast()
-            labelsReachingDestination[currentLabel.labelIndex] = currentLabel
+
+            // Finding the path corresponding to the current label
+            val path = findPath(currentLabel, labelsMap)
+
+            // Creating the FeasiblePath object and adding to the list of feasible paths.
+            val feasiblePath = FeasiblePath(  path = path,
+                                    totalPrize = currentLabel.collectedPrize,
+                                    pathLength = currentLabel.pathLength)
+
+            feasiblePathList.add(feasiblePath)
+
             continue
         }
 
@@ -113,7 +128,7 @@ fun enumerateAllPathsWithinBudget(instance: Instance)
     }
 
     /*
-        All feasible paths have been found. Creating a list of FeasiblePath objects.
+        All feasible paths have been found.
      */
 
 }
