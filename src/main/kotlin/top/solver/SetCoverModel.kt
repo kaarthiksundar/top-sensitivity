@@ -7,6 +7,7 @@ import ilog.concert.IloRange
 import ilog.cplex.IloCplex
 import top.data.Instance
 import top.data.Route
+import top.main.TOPException
 
 class SetCoverModel(private var cplex: IloCplex) {
 
@@ -20,8 +21,15 @@ class SetCoverModel(private var cplex: IloCplex) {
      */
     private var constraints: ArrayList<IloRange> = arrayListOf()
 
+    /**
+     * Objective value of the set cover model. Set to 0.0 by default.
+     */
+    var objective: Double = 0.0
+        private set
+
     fun createModel(instance: Instance,
-                    routes: List<Route>){
+                    routes: List<Route>,
+                    binary: Boolean = false){
 
         /**
          *  The (full) set cover formulation of the TOP consists of the following.
@@ -103,9 +111,14 @@ class SetCoverModel(private var cplex: IloCplex) {
             /**
              * Creating the route variable x_k and adding the corresponding x_k term for the objective and the
              * route expression for constraint (2)
+             *
+             * The type of the route variable is also defined here. This part handles constraint (3) as a result.
              */
 
-            routeVariable.add(cplex.numVar(0.0, 1.0, IloNumVarType.Float, "x_$k"))
+            if (binary)
+                routeVariable.add(cplex.numVar(0.0, 1.0, IloNumVarType.Bool, "x_$k"))
+            else
+                routeVariable.add(cplex.numVar(0.0, 1.0, IloNumVarType.Float, "x_$k"))
 
             routeExpression.addTerm(1.0, routeVariable[k])
             objectiveExpression.addTerm(routes[k].score, routeVariable[k])
@@ -146,13 +159,18 @@ class SetCoverModel(private var cplex: IloCplex) {
              *
              * It may be possible a vertex v_i is not visited by any of the feasible routes. This can happen because
              * of the budget requirement.
+             *
+             * TODO:    Check if this really needs to have instance.source and instance.destination in the if-statement.
+             *          When constructing vertexRoutes, the source and destination entries are never updated. Therefore,
+             *          it should be possible to only use vertexRoutes[i].isEmpty()
+             *
              */
             if (i == instance.source || i == instance.destination || vertexRoutes[i].isEmpty())
                 continue
 
             /**
              *   Vertex i corresponds to a single row. Iteratively adding the terms for this row before moving to the
-             *   next vertex
+             *   next row.
              */
 
             val expr: IloLinearNumExpr = cplex.linearNumExpr()
@@ -174,9 +192,15 @@ class SetCoverModel(private var cplex: IloCplex) {
 
         /**
          * CONSTRAINT (3) ALREADY HANDLED IN CREATION OF THE ROUTE VARIABLES.
-         *
-         * LINEAR RELAXATION BEING TAKEN.
          */
 
+    }
+
+    fun solve(){
+        cplex.setOut(null)
+        if (!cplex.solve()){
+            throw TOPException("Set covering problem infeasible")
+        }
+        objective = cplex.objValue
     }
 }
