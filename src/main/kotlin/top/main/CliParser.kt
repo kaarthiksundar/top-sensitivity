@@ -49,6 +49,18 @@ class CliParser : CliktCommand() {
             "Time limit should be a strictly positive integer"
         }
     }
+    /**
+     * Algorithm selection
+     */
+    val algorithm: Int by option(
+        "-a",
+        help = "0 for enumeration 1 for B&P"
+    ).int().default(0).validate{
+        require(it == 0 || it == 1){
+            "Algorithm options are 0 (enumeration) and 1 (B&P)"
+        }
+    }
+
 
     override fun run() {
         log.debug("reading command line arguments...")

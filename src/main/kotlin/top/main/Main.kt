@@ -1,8 +1,10 @@
 package top.main
 
 import mu.KotlinLogging
+import top.data.Instance
 import top.data.InstanceBuilder
 import top.data.Parameters
+import top.solver.enumeratePaths
 
 private val log = KotlinLogging.logger {}
 
@@ -16,6 +18,8 @@ fun main(args: Array<String>) {
         name = parameters.instanceName,
         path = parameters.instancePath
     ).getInstance()
+
+    runSolver(instance, parameters)
 }
 
 fun parseArgs(args: Array<String>) : Parameters {
@@ -25,6 +29,14 @@ fun parseArgs(args: Array<String>) : Parameters {
         instanceName = parser.instanceName,
         instancePath = parser.instancePath,
         timeLimitInSeconds = parser.timeLimitInSeconds,
-        outputPath = parser.outputPath
+        outputPath = parser.outputPath,
+        algorithm = parser.algorithm
     )
+}
+
+fun runSolver(instance: Instance, parameters: Parameters) {
+    if (parameters.algorithm == 0) {
+        val routes = enumeratePaths(instance)
+        log.info("number of feasible paths: ${routes.size}")
+    }
 }
