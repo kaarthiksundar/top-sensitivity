@@ -69,11 +69,16 @@ class SetCoverModel(private var cplex: IloCplex) {
          */
 
         /*
-            Creates an empty linear expression. This will be used for constraint (2).
+            Creates an empty linear expression for scores. This will be used for the objective.
+         */
+        val objectiveExpression : IloLinearNumExpr = cplex.linearNumExpr()
+
+        /*
+            Creates an empty linear expression for routes. This will be used for constraint (2).
          */
         val routeExpression: IloLinearNumExpr = cplex.linearNumExpr()
 
-        for (i in 0 until routes.size){
+        for (k in 0 until routes.size){
 
             /*
                 Adding the route variable, x_k, for feasible route r_k
@@ -84,10 +89,40 @@ class SetCoverModel(private var cplex: IloCplex) {
                         String s)                       String name of variable
 
              */
-            routeVariable.add(cplex.numVar(0.0, 1.0, IloNumVarType.Float, "x_$i"))
-            routeExpression.addTerm(1.0, routeVariable[i])
+            routeVariable.add(cplex.numVar(0.0, 1.0, IloNumVarType.Float, "x_$k"))
 
+            /*
+                Adding the term corresponding to route r_k for constraint (2)
+             */
+            routeExpression.addTerm(1.0, routeVariable[k])
+
+            /*
+                Adding the term corresponding to route r_k to the objective linear expression. The term is of the form
+
+                                p_k * x_k
+             */
+            objectiveExpression.addTerm(routes[k].score, routeVariable[k])
         }
+
+        // Finished iterating over all feasible routes being considered.
+
+        /**
+         *  SETTING THE OBJECTIVE
+          */
+        // Setting the sense of the objective to be a MAXIMIZATION problem.
+        cplex.addMaximize(objectiveExpression)
+
+        /**
+         * SETTING CONSTRAINT (1)
+         */
+
+        /**
+         * SETTING CONSTRAINT (2)
+         */
+
+        /**
+         * CONSTRAINT (3) ALREADY HANDLED IN CREATION OF THE ROUTE VARIABLES
+         */
 
     }
 }
