@@ -3,9 +3,8 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 application {
     // Define the main class for the application.
     mainClass.set("top.main.MainKt")
-//    val cplexLibPath: String by project
-    val cplexLibPath = "/Users/kaarthik/Applications/CPLEX_Studio1210/cplex/bin/x86-64_osx"
-//    val cplexLibPath = "C:\\Program Files\\IBM\\ILOG\\CPLEX_Studio_Community129\\cplex\\bin\\x64_win64\\"
+
+    val cplexLibPath: String by project
     println("CPLEX Lib Path: $cplexLibPath")
     applicationDefaultJvmArgs = listOf(
         "-Xms2g",
@@ -63,9 +62,7 @@ dependencies {
     // use JGraphT library
     implementation("org.jgrapht:jgrapht-core:1.5.0")
 
-//    val cplexJarPath: String by project
-    val cplexJarPath = "/Users/kaarthik/Applications/CPLEX_Studio1210/cplex/lib/cplex.jar"
-//    val cplexJarPath = "C:\\Program Files\\IBM\\ILOG\\CPLEX_Studio_Community129\\cplex\\lib\\cplex.jar"
+    val cplexJarPath: String by project
     println("CPLEX JAR Path: $cplexJarPath")
     implementation(files(cplexJarPath))
 
