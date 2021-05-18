@@ -1,9 +1,10 @@
 package top.main
 
 import mu.KotlinLogging
+import top.data.Instance
 import top.data.InstanceBuilder
 import top.data.Parameters
-import top.solver.enumerateAllPathsWithinBudget
+import top.solver.enumeratePaths
 
 private val log = KotlinLogging.logger {}
 
@@ -18,16 +19,7 @@ fun main(args: Array<String>) {
         path = parameters.instancePath
     ).getInstance()
 
-   val feasiblePathList = enumerateAllPathsWithinBudget(instance)
-
-   println("Instance: ${parameters.instanceName}")
-   println("Graph: ${instance.graph}")
-   println("Source: ${instance.source}")
-   println("Destination: ${instance.destination}")
-   println("Budget: ${instance.budget}")
-   println("Number of Feasible Paths: ${feasiblePathList.size}")
-   println("Feasible Path List: $feasiblePathList")
-
+    runSolver(instance, parameters)
 }
 
 fun parseArgs(args: Array<String>) : Parameters {
@@ -37,6 +29,14 @@ fun parseArgs(args: Array<String>) : Parameters {
         instanceName = parser.instanceName,
         instancePath = parser.instancePath,
         timeLimitInSeconds = parser.timeLimitInSeconds,
-        outputPath = parser.outputPath
+        outputPath = parser.outputPath,
+        algorithm = parser.algorithm
     )
+}
+
+fun runSolver(instance: Instance, parameters: Parameters) {
+    if (parameters.algorithm == 0) {
+        val routes = enumeratePaths(instance)
+        log.info("number of feasible paths: ${routes.size}")
+    }
 }

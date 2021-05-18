@@ -15,7 +15,8 @@ data class Parameters(
     val instancePath: String,
     val outputPath: String,
     val timeLimitInSeconds: Int,
+    val algorithm: Int,
     val eps: Double = 1e-5,
-    val numBits: Int = 64,
+    val numBits: Int = 64
 )
 
