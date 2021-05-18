@@ -19,6 +19,7 @@ fun main(args: Array<String>) {
         path = parameters.instancePath
     ).getInstance()
 
+    log.info("Running solver")
     runSolver(instance, parameters)
 }
 

@@ -61,7 +61,7 @@ fun enumeratePaths(instance: Instance) : List<Route> {
 
     val initialLabel = Label(instance.source, 0.0, 0.0, null, mutableListOf(instance.source))
 
-    val processedLabels = List(instance.numVertices) { mutableListOf<Label>() };
+    val processedLabels = List(instance.numVertices) { mutableListOf<Label>() }
     val unprocessedLabels = mutableListOf(initialLabel)
 
     val routes = mutableListOf<Route>()
@@ -93,7 +93,7 @@ fun enumeratePaths(instance: Instance) : List<Route> {
 
 /**
  * Function to generate a route from destination label
- * @param destinationLabel Lables with vertex as destination
+ * @param destinationLabel Label with vertex as destination
  * @return Returns an object of the [Route] class
  */
 fun generateRoute(destinationLabel: Label) : Route {

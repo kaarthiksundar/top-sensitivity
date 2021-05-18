@@ -39,7 +39,7 @@ class InstanceBuilder(
      * @property graph directed weighted graph containing all the information
      */
     private var instance: Instance
-    private val lines: List<String> = File(path + name).readLines()
+    private val lines = File(path + name).readLines()
     private val source = 0
     private val scores = lines.subList(3, lines.size).map(::parseScore)
     private val numVertices = lines[0].split("[ \t]".toRegex()).last().toInt()
