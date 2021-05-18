@@ -2,7 +2,7 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 application {
     // Define the main class for the application.
-    mainClassName = "top.main.MainKt"
+    mainClass.set("top.main.MainKt")
 //    val cplexLibPath: String by project
     val cplexLibPath = "/Users/kaarthik/Applications/CPLEX_Studio1210/cplex/bin/x86-64_osx"
 //    val cplexLibPath = "C:\\Program Files\\IBM\\ILOG\\CPLEX_Studio_Community129\\cplex\\bin\\x64_win64\\"
