@@ -61,10 +61,10 @@ fun enumeratePaths(instance: Instance) : List<Route> {
 
     val initialLabel = Label(instance.source, 0.0, 0.0, null, mutableListOf(instance.source))
 
-    var processedLabels = List(instance.numVertices) { mutableListOf<Label>() };
-    var unprocessedLabels = mutableListOf(initialLabel)
+    val processedLabels = List(instance.numVertices) { mutableListOf<Label>() };
+    val unprocessedLabels = mutableListOf(initialLabel)
 
-    var routes = mutableListOf<Route>()
+    val routes = mutableListOf<Route>()
 
     while (unprocessedLabels.isNotEmpty()) {
         val currentLabel = unprocessedLabels.last()
