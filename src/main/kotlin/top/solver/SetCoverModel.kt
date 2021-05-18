@@ -203,4 +203,10 @@ class SetCoverModel(private var cplex: IloCplex) {
         }
         objective = cplex.objValue
     }
+
+    fun getSolution(): List<Double>{
+        return (0 until routeVariable.size).map{
+            cplex.getValue(routeVariable[it])
+        }
+    }
 }
