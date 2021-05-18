@@ -140,7 +140,28 @@ class SetCoverModel(private var cplex: IloCplex) {
          *
          *              sum(a_{i, k} * x_k for all routes r_k) <= 1      for all v_i \in (V - {source, destination})
          */
+        for (i in 0 until instance.numVertices){
+            /**
+             * Don't need to consider the source or destination vertices.
+             *
+             * It may be possible a vertex v_i is not visited by any of the feasible routes. This can happen because
+             * of the budget requirement.
+             */
+            if (i == instance.source || i == instance.destination || vertexRoutes[i].isEmpty())
+                continue
 
+            /**
+             *   Vertex i corresponds to a single row. Iteratively adding the terms for this row before moving to the
+             *   next vertex
+             */
+
+            val expr: IloLinearNumExpr = cplex.linearNumExpr()
+            vertexRoutes[i].forEach{
+                expr.addTerm(1.0, routeVariable[it])
+            }
+            constraints.add(cplex.addLe(expr, 1.0, "vertex_cover_$i"))
+
+        }
 
         /**
          * SETTING CONSTRAINT
@@ -152,7 +173,9 @@ class SetCoverModel(private var cplex: IloCplex) {
         constraints.add(cplex.addLe(routeExpression, instance.numVehicles.toDouble(), "route_cover"))
 
         /**
-         * CONSTRAINT (3) ALREADY HANDLED IN CREATION OF THE ROUTE VARIABLES
+         * CONSTRAINT (3) ALREADY HANDLED IN CREATION OF THE ROUTE VARIABLES.
+         *
+         * LINEAR RELAXATION BEING TAKEN.
          */
 
     }
