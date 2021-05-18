@@ -87,30 +87,42 @@ class SetCoverModel(private var cplex: IloCplex) {
          */
         val routeExpression: IloLinearNumExpr = cplex.linearNumExpr()
 
-        for (k in 0 until routes.size){
+        /*
+            List of lists of routes.
 
-            /*
-                Adding the route variable, x_k, for feasible route r_k
+            The kth entry corresponds to vertex v_i and the associated MutableList at
+            vertexRoutes[i] is a list of indices of routes covering vertex v_i.
 
-                numVar( Double lb,                      Lower bound on variable
-                        Double ub,                      Upper bound on variable
-                        IloNumVarType type,             Type of variable (boolean, float, etc.)
-                        String s)                       String name of variable
+            That is, if a route r_k uses vertex v_i, then the index k will be in the list associated with
+            vertexRoutes[i].
+         */
+        val vertexRoutes = List(instance.numVertices) { mutableListOf<Int>() }
 
+        for (k in routes.indices){
+
+            /**
+             * Creating the route variable x_k and adding the corresponding x_k term for the objective and the
+             * route expression for constraint (2)
              */
+
             routeVariable.add(cplex.numVar(0.0, 1.0, IloNumVarType.Float, "x_$k"))
 
-            /*
-                Adding the term corresponding to route r_k for constraint (2)
-             */
             routeExpression.addTerm(1.0, routeVariable[k])
-
-            /*
-                Adding the term corresponding to route r_k to the objective linear expression. The term is of the form
-
-                                p_k * x_k
-             */
             objectiveExpression.addTerm(routes[k].score, routeVariable[k])
+
+            /**
+             * Checking which vertices are visited by route r_k and updating vertexRoutes accordingly.
+             */
+
+            routes[k].path.forEach{
+                // Vertex covering not considered for the source or destination
+                if (it == instance.source || it == instance.destination)
+                    return@forEach
+                // Indicating that vertex v_it is visited in route r_k
+                // NOTE: There will never be duplicates because the feasible routes only visit nodes at most once
+                vertexRoutes[it].add(k)
+            }
+
         }
 
         // Finished iterating over all feasible routes being considered.
@@ -122,8 +134,13 @@ class SetCoverModel(private var cplex: IloCplex) {
         cplex.addMaximize(objectiveExpression)
 
         /**
-         * SETTING CONSTRAINT (1)
+         * SETTING CONSTRAINT
+         *
+         *      (1)     Each vertex (other than the source and destination) is visited at most once
+         *
+         *              sum(a_{i, k} * x_k for all routes r_k) <= 1      for all v_i \in (V - {source, destination})
          */
+
 
         /**
          * SETTING CONSTRAINT
