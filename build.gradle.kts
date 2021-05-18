@@ -2,7 +2,7 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 application {
     // Define the main class for the application.
-    mainClassName = "top.main.MainKt"
+    mainClass.set("top.main.MainKt")
 //    val cplexLibPath: String by project
     val cplexLibPath = "/Users/kaarthik/Applications/CPLEX_Studio1210/cplex/bin/x86-64_osx"
 //    val cplexLibPath = "C:\\Program Files\\IBM\\ILOG\\CPLEX_Studio_Community129\\cplex\\bin\\x64_win64\\"
@@ -25,13 +25,12 @@ plugins {
     id("org.jetbrains.dokka") version "0.10.0"
 
     // Fat JAR plugin
-    id("com.github.johnrengelman.shadow") version "6.1.0"
+    id("com.github.johnrengelman.shadow") version "7.0.0"
 }
 
 repositories {
-    // Use jcenter for resolving your dependencies.
     // You can declare any Maven/Ivy/file repository here.
-    jcenter()
+    mavenCentral()
 }
 
 dependencies {
