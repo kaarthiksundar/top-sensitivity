@@ -3,13 +3,22 @@ package top.solver
 import ilog.concert.IloLinearNumExpr
 import ilog.concert.IloNumVar
 import ilog.concert.IloNumVarType
+import ilog.concert.IloRange
 import ilog.cplex.IloCplex
 import top.data.Instance
 import top.data.Route
 
 class SetCoverModel(private var cplex: IloCplex) {
 
+    /**
+     * List of the route variables x_k corresponding to feasible route r_k
+     */
     private var routeVariable: ArrayList<IloNumVar> = arrayListOf()
+
+    /**
+     * List of the constraints in the set cover model
+     */
+    private var constraints: ArrayList<IloRange> = arrayListOf()
 
     fun createModel(instance: Instance,
                     routes: List<Route>){
@@ -35,7 +44,7 @@ class SetCoverModel(private var cplex: IloCplex) {
          *
          *      (1)     Each vertex (other than the source and destination) is visited at most once
          *
-         *              sum(a_{i, k} * x_k for all routes r_k) <= 1      v_i \in V - {source, destination}
+         *              sum(a_{i, k} * x_k for all routes r_k) <= 1      for all v_i \in (V - {source, destination})
          *
          *      (2)     At most m routes used
          *
@@ -117,8 +126,13 @@ class SetCoverModel(private var cplex: IloCplex) {
          */
 
         /**
-         * SETTING CONSTRAINT (2)
+         * SETTING CONSTRAINT
+         *
+         *      (2)     At most m routes used
+         *
+         *              sum(x_k for all routes r_k) <= m
          */
+        constraints.add(cplex.addLe(routeExpression, instance.numVehicles.toDouble(), "route_cover"))
 
         /**
          * CONSTRAINT (3) ALREADY HANDLED IN CREATION OF THE ROUTE VARIABLES
