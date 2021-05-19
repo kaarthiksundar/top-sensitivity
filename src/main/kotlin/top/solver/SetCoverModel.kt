@@ -9,6 +9,11 @@ import top.data.Instance
 import top.data.Route
 import top.main.TOPException
 
+/**
+ * Class that formulates the set cover formulation of the team orienteering problem, using a list of feasible routes.
+ *
+ * @param cplex An [IloCplex] object.
+ */
 class SetCoverModel(private var cplex: IloCplex) {
 
     /**
@@ -27,6 +32,15 @@ class SetCoverModel(private var cplex: IloCplex) {
     var objective: Double = 0.0
         private set
 
+    /**
+     * Function that creates a set cover model for the team orienteering problem.
+     *
+     * @param instance An [Instance] object containing relevant information about the problem to be solved
+     * @param routes    List of [Route] objects that correspond to feasible routes being considered for the set cover
+     * model formulation.
+     * @param binary    Boolean that indicates if all routes are considered or branch-and-price is used so only a
+     * subset of the feasible routes in the graph are considered and a linear relaxation is used.
+     */
     fun createModel(instance: Instance,
                     routes: List<Route>,
                     binary: Boolean = false){
@@ -62,47 +76,22 @@ class SetCoverModel(private var cplex: IloCplex) {
          */
 
         /**
-         * NOTE: (FOR PERSONAL REFERENCE)
-         *
-         * IloNumVar:           Object representing modeling variables. It is characterized by its bounds and type.
-         *                      Possible types are
-         *
-         *                      (1) IloNumVarType.Float
-         *                      (2) IloNumVarType.Int
-         *                      (3) IloNumVarType.Bool
-         *
-         *
-         * IloLinearNumExpr:    Objects of this type represent linear expressions of the form
-         *
-         *                                  sum_{i = 1...n} a_i * x_i + c
-         *
-         *                      where x_i are variables of type IloNumVar and c and a_i are DOUBLE values
-         *
-         *                      A term a_i * x_i can be added to a IloLinearNumExpr object by using
-         *
-         *                                      addTerm(IloNumVar x_i, Double a_i)
-         *
-         *                      which adds the term a_i * x_i to the linear expression.
-         */
-
-        /*
-            Creates an empty linear expression for scores. This will be used for the objective.
+         *   Creates an empty linear expression for scores. This will be used for the objective.
          */
         val objectiveExpression : IloLinearNumExpr = cplex.linearNumExpr()
 
-        /*
-            Creates an empty linear expression for routes. This will be used for constraint (2).
+        /**
+         *   Creates an empty linear expression for routes. This will be used for constraint (2).
          */
         val routeExpression: IloLinearNumExpr = cplex.linearNumExpr()
 
-        /*
-            List of lists of routes.
-
-            The kth entry corresponds to vertex v_i and the associated MutableList at
-            vertexRoutes[i] is a list of indices of routes covering vertex v_i.
-
-            That is, if a route r_k uses vertex v_i, then the index k will be in the list associated with
-            vertexRoutes[i].
+        /**
+         *   List of routes.
+         *
+         *   The i-th entry corresponds to vertex v_i and the associated MutableList at
+         *   vertexRoutes(i) is a list of indices of routes covering vertex v_i.
+         *
+         *   That is, if a route r_k uses vertex v_i, then the index k will be in the list vertexRoutes(i).
          */
         val vertexRoutes = List(instance.numVertices) { mutableListOf<Int>() }
 
@@ -131,8 +120,12 @@ class SetCoverModel(private var cplex: IloCplex) {
                 // Vertex covering not considered for the source or destination
                 if (it == instance.source || it == instance.destination)
                     return@forEach
-                // Indicating that vertex v_it is visited in route r_k
-                // NOTE: There will never be duplicates because the feasible routes only visit nodes at most once
+                /**
+                 * Indicating that vertex v_it is visited in route r_k.
+                 *
+                 * By construction, index k corresponding to route r_k will never repeat in vertexRoutes(i) for v_i.
+                 * This is a direct result of the fact the feasible routes visit vertices at most once.
+                 */
                 vertexRoutes[it].add(k)
             }
 
@@ -196,6 +189,10 @@ class SetCoverModel(private var cplex: IloCplex) {
 
     }
 
+    /**
+     * Function that solves the CPLEX model of the set cover formulation of the team orienteering problem created using
+     * the [createModel] function.
+     */
     fun solve(){
         cplex.setOut(null)
         if (!cplex.solve()){
@@ -204,6 +201,14 @@ class SetCoverModel(private var cplex: IloCplex) {
         objective = cplex.objValue
     }
 
+    /*
+        TODO: May want to add a binary value in the class that tracks whether the model has been solved yet. If this
+              is added, we can throw an error when using getSolution before the model has been solved.
+     */
+
+    /**
+     * Function that returns a list of values of the route variables after solving using the [solve] function.
+     */
     fun getSolution(): List<Double>{
         return (0 until routeVariable.size).map{
             cplex.getValue(routeVariable[it])
