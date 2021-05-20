@@ -61,7 +61,6 @@ fun enumeratePaths(instance: Instance) : List<Route> {
 
     val initialLabel = Label(instance.source, 0.0, 0.0, null, mutableListOf(instance.source))
 
-    val processedLabels = List(instance.numVertices) { mutableListOf<Label>() }
     val unprocessedLabels = mutableListOf(initialLabel)
 
     val routes = mutableListOf<Route>()
@@ -70,12 +69,10 @@ fun enumeratePaths(instance: Instance) : List<Route> {
         val currentLabel = unprocessedLabels.last()
         if (currentLabel.vertex == instance.destination) {
             unprocessedLabels.removeLast()
-            processedLabels[instance.destination].add(currentLabel)
             routes.add(generateRoute(currentLabel))
         }
         else {
             unprocessedLabels.removeLast()
-            processedLabels[currentLabel.vertex].add(currentLabel)
             val outgoingEdges = graph.outgoingEdgesOf(currentLabel.vertex)
             for (e in outgoingEdges) {
                 val edgeLength = graph.getEdgeWeight(e)
