@@ -9,41 +9,63 @@ import top.data.Instance
 import top.data.Route
 import top.main.TOPException
 
+
 /**
- * Class that formulates the set cover formulation of the team orienteering problem, using a list of feasible routes.
+ * Class that formulates the set cover model given a list of routes, using a list of feasible routes.
  *
  * @param cplex An [IloCplex] object.
  */
 class SetCoverModel(private var cplex: IloCplex) {
 
     /**
-     * List of the route variables x_k corresponding to feasible route r_k
+     * route constraint id
+     */
+    private var routeConstraintId: Int = 0
+    /**
+     * list of constraint ids for vertex cover constraints
+     */
+    private lateinit var vertexCoverConstraintId: MutableList<Int?>
+    /**
+     * map of must-visit vertex to constraint id
+     */
+    private var mustVisitVertexConstraintId: MutableMap<Int, Int> = mutableMapOf()
+    /**
+     * map of must-visit edge to constraint id
+     */
+    private var mustVisitEdgeConstraintId: MutableMap<Pair<Int, Int>, Int> = mutableMapOf()
+    /**
+     * list of route variables
      */
     private var routeVariable: ArrayList<IloNumVar> = arrayListOf()
-
     /**
-     * List of the constraints in the set cover model
+     * auxiliary variable to detect infeasibility
+     */
+    private lateinit var auxiliaryVariable: IloNumVar
+    /**
+     * list of all constraints
      */
     private var constraints: ArrayList<IloRange> = arrayListOf()
 
     /**
-     * Objective value of the set cover model. Set to 0.0 by default.
+     * CPLEX objective value
      */
-    var objective: Double = 0.0
+    var objective = 0.0
         private set
 
     /**
      * Function that creates a set cover model for the team orienteering problem.
      *
-     * @param instance An [Instance] object containing relevant information about the problem to be solved
-     * @param routes    List of [Route] objects that correspond to feasible routes being considered for the set cover
-     * model formulation.
-     * @param binary    Boolean that indicates if all routes are considered or branch-and-price is used so only a
-     * subset of the feasible routes in the graph are considered and a linear relaxation is used.
+     * @param instance An [Instance] object containing relevant information about the problem to be solved.
+     * @param routes List of [Route] objects for the set cover model.
+     * @param asMIP Boolean variable that is used to toggle between MIP and LP relaxation solving.
      */
-    fun createModel(instance: Instance,
-                    routes: List<Route>,
-                    binary: Boolean = false){
+    fun createModel(
+        instance: Instance,
+        routes: List<Route>,
+        asMIP: Boolean = false,
+        mustVisitVertices: IntArray = intArrayOf(),
+        mustVisitEdges: List<Pair<Int, Int>> = mutableListOf()
+    ) {
 
         /**
          *  The (full) set cover formulation of the TOP consists of the following.
@@ -72,7 +94,7 @@ class SetCoverModel(private var cplex: IloCplex) {
          *
          *              sum(x_k for all routes r_k) <= m
          *
-         *      (3)     x_k binary
+         *      (3)     x_k binary or >= 0 depending on [asMIP]
          */
 
         /**
@@ -95,7 +117,7 @@ class SetCoverModel(private var cplex: IloCplex) {
          */
         val vertexRoutes = List(instance.numVertices) { mutableListOf<Int>() }
 
-        for (k in routes.indices){
+        for (k in routes.indices) {
 
             /**
              * Creating the route variable x_k and adding the corresponding x_k term for the objective and the
@@ -104,7 +126,7 @@ class SetCoverModel(private var cplex: IloCplex) {
              * The type of the route variable is also defined here. This part handles constraint (3) as a result.
              */
 
-            if (binary)
+            if (asMIP)
                 routeVariable.add(cplex.numVar(0.0, 1.0, IloNumVarType.Bool, "x_$k"))
             else
                 routeVariable.add(cplex.numVar(0.0, 1.0, IloNumVarType.Float, "x_$k"))
@@ -116,7 +138,7 @@ class SetCoverModel(private var cplex: IloCplex) {
              * Checking which vertices are visited by route r_k and updating vertexRoutes accordingly.
              */
 
-            routes[k].path.forEach{
+            routes[k].path.forEach {
                 // Vertex covering not considered for the source or destination
                 if (it == instance.source || it == instance.destination)
                     return@forEach
@@ -153,12 +175,9 @@ class SetCoverModel(private var cplex: IloCplex) {
              * It may be possible a vertex v_i is not visited by any of the feasible routes. This can happen because
              * of the budget requirement.
              *
-             * TODO:    Check if this really needs to have instance.source and instance.destination in the if-statement.
-             *          When constructing vertexRoutes, the source and destination entries are never updated. Therefore,
-             *          it should be possible to only use vertexRoutes[i].isEmpty()
              *
              */
-            if (i == instance.source || i == instance.destination || vertexRoutes[i].isEmpty())
+            if (vertexRoutes[i].isEmpty())
                 continue
 
             /**
@@ -167,7 +186,7 @@ class SetCoverModel(private var cplex: IloCplex) {
              */
 
             val expr: IloLinearNumExpr = cplex.linearNumExpr()
-            vertexRoutes[i].forEach{
+            vertexRoutes[i].forEach {
                 expr.addTerm(1.0, routeVariable[it])
             }
             constraints.add(cplex.addLe(expr, 1.0, "vertex_cover_$i"))
@@ -193,7 +212,7 @@ class SetCoverModel(private var cplex: IloCplex) {
      * Function that solves the CPLEX model of the set cover formulation of the team orienteering problem created using
      * the [createModel] function.
      */
-    fun solve(){
+    fun solve() {
         cplex.setOut(null)
         if (!cplex.solve()){
             throw TOPException("Set covering problem infeasible")
@@ -209,8 +228,8 @@ class SetCoverModel(private var cplex: IloCplex) {
     /**
      * Function that returns a list of values of the route variables after solving using the [solve] function.
      */
-    fun getSolution(): List<Double>{
-        return (0 until routeVariable.size).map{
+    fun getSolution(): List<Double> {
+        return (0 until routeVariable.size).map {
             cplex.getValue(routeVariable[it])
         }
     }
