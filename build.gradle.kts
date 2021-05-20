@@ -22,7 +22,7 @@ plugins {
     application
 
     // Documentation plugin
-    id("org.jetbrains.dokka") version "0.10.0"
+    id("org.jetbrains.dokka") version "1.4.32"
 
     // Fat JAR plugin
     id("com.github.johnrengelman.shadow") version "7.0.0"
@@ -69,6 +69,9 @@ dependencies {
     println("CPLEX JAR Path: $cplexJarPath")
     implementation(files(cplexJarPath))
 
+    // Mathjax dokka
+    implementation("org.jetbrains.dokka:mathjax-plugin:1.4.10.2")
+
     // Use the Kotlin JUnit integration.
     testImplementation("org.junit.jupiter:junit-jupiter:5.6.2")
 
@@ -78,13 +81,13 @@ dependencies {
 }
 
 tasks {
-    dokka {
-        outputDirectory = "$buildDir/javadoc"
-        configuration {
-            includeNonPublic = true
-            noStdlibLink = true
-        }
-    }
+//    dokka {
+//        outputDirectory = "$buildDir/javadoc"
+//        configuration {
+//            includeNonPublic = true
+//            noStdlibLink = true
+//        }
+//    }
 
     register<Delete>("cleanLogs") {
         delete(fileTree("logs") {
