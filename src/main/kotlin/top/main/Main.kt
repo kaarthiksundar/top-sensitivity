@@ -1,9 +1,11 @@
 package top.main
 
+import ilog.cplex.IloCplex
 import mu.KotlinLogging
 import top.data.Instance
 import top.data.InstanceBuilder
 import top.data.Parameters
+import top.solver.SetCoverModel
 import top.solver.enumeratePaths
 
 private val log = KotlinLogging.logger {}
@@ -19,8 +21,32 @@ fun main(args: Array<String>) {
         path = parameters.instancePath
     ).getInstance()
 
-    log.info("Running solver")
-    runSolver(instance, parameters)
+    //log.info("Running solver")
+    //runSolver(instance, parameters)
+
+    log.info("Enumerating Routes")
+    val routes = enumeratePaths(instance)
+
+    log.info("Number of feasible paths: ${routes.size}")
+
+    log.info("Making CPLEX object")
+    val cplex = IloCplex()
+    log.info("CPLEX object created")
+
+    log.info("Creating set cover object")
+    val setCoverModel = SetCoverModel(cplex)
+    log.info("Creating set cover model")
+    setCoverModel.createModel(instance, routes)
+    log.info("Set cover model created")
+    log.info("Solving set cover model")
+    setCoverModel.solve()
+    log.info("Set cover model solved")
+
+    log.info("Getting solution values")
+    val routeVariableValues: List<Double> = setCoverModel.getSolution()
+
+    log.info("Route Values: $routeVariableValues")
+    log.info("Objective Value: ${setCoverModel.objective}")
 }
 
 fun parseArgs(args: Array<String>) : Parameters {
