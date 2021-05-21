@@ -9,6 +9,7 @@ package top.data
  * @param algorithm Int: Integer indicating whether full enumeration or branch-and-price is used.
  * @param eps Constant value used as the tolerance for comparing double values (Default: 1e-5)
  * @param maxColumnsAdded Maximum number of columns added when solving the pricing problem
+ * @param numInitialRoutes Number of routes used for the first iteration of the column generation scheme
  * @param numBits Constant value representing the number of bits of the operating system (Default: 64)
  */
 
@@ -20,6 +21,7 @@ data class Parameters(
     val algorithm: Int,
     val eps: Double = 1e-5,
     val maxColumnsAdded: Int = 100,
+    val numInitialRoutes: Int = 10,
     val numBits: Int = 64
 )
 
