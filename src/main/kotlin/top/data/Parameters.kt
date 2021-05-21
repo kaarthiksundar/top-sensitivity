@@ -8,6 +8,7 @@ package top.data
  * @param timeLimitInSeconds Int: Maximum amount of time the solver can run for
  * @param algorithm Int: Integer indicating whether full enumeration or branch-and-price is used.
  * @param eps Constant value used as the tolerance for comparing double values (Default: 1e-5)
+ * @param maxColumnsAdded Maximum number of columns added when solving the pricing problem
  * @param numBits Constant value representing the number of bits of the operating system (Default: 64)
  */
 
@@ -18,6 +19,7 @@ data class Parameters(
     val timeLimitInSeconds: Int,
     val algorithm: Int,
     val eps: Double = 1e-5,
+    val maxColumnsAdded: Int = 100,
     val numBits: Int = 64
 )
 
