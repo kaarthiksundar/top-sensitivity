@@ -49,8 +49,9 @@ class PricingProblem(
             val currentState = unprocessedStates.last()
             unprocessedStates.removeLast()
 
-            if (currentState.vertex == instance.destination && currentState.cost < 0){
-                newRoutes.add(currentState.generateRoute())
+            if (currentState.vertex == instance.destination){
+                if (currentState.cost < 0)
+                    newRoutes.add(currentState.generateRoute())
 
                 if (newRoutes.size >= parameters.maxColumnsAdded)
                     return newRoutes
