@@ -20,7 +20,7 @@ class CliParser : CliktCommand() {
     val instanceName: String by option(
         "-n",
         help = "Instance file name with .txt extension"
-    ).default("p2.2.a.txt")
+    ).default("p2.2.f.txt")
 
     /**
      * File path for the folder containing the instance file.
