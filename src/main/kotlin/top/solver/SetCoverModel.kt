@@ -116,6 +116,7 @@ class SetCoverModel(private var cplex: IloCplex) {
          *   That is, if a route r_k uses vertex v_i, then the index k will be in the list vertexRoutes(i).
          */
         val vertexRoutes = List(instance.numVertices) { mutableListOf<Int>() }
+        vertexCoverConstraintId = MutableList(instance.numVertices) {null}
 
         for (k in routes.indices) {
 
@@ -189,6 +190,7 @@ class SetCoverModel(private var cplex: IloCplex) {
             vertexRoutes[i].forEach {
                 expr.addTerm(1.0, routeVariable[it])
             }
+            vertexCoverConstraintId[i] = constraints.size
             constraints.add(cplex.addLe(expr, 1.0, "vertex_cover_$i"))
 
         }
@@ -200,6 +202,7 @@ class SetCoverModel(private var cplex: IloCplex) {
          *
          *              sum(x_k for all routes r_k) <= m
          */
+        routeConstraintId = constraints.size
         constraints.add(cplex.addLe(routeExpression, instance.numVehicles.toDouble(), "route_cover"))
 
         /**
@@ -232,5 +235,13 @@ class SetCoverModel(private var cplex: IloCplex) {
         return (0 until routeVariable.size).map {
             cplex.getValue(routeVariable[it])
         }
+    }
+
+    fun getRouteDual(): Double = cplex.getDual(constraints[routeConstraintId])
+
+    fun getVertexDuals() : List<Double> = (0 until vertexCoverConstraintId.size).map{
+        if (vertexCoverConstraintId[it] != null)
+            cplex.getDual(constraints[vertexCoverConstraintId[it]!!]) else 0.0
+
     }
 }
