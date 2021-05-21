@@ -91,8 +91,10 @@ class ColumnGenerationSolver(
     private fun solveRestrictedMasterProblem(){
 
         // Creating the restricted master problem and solving
+        // TODO: Check if combining these two lines would be better
         val setCoverModel = SetCoverModel(cplex)
         setCoverModel.createModel(instance, routes)
+
         setCoverModel.solve()
 
         // Collecting the dual variable corresponding to the number of vehicles constraint, constraint (3).
