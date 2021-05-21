@@ -92,7 +92,7 @@ fun enumeratePaths(instance: Instance) : List<Route> {
  * Finds an initial route for a single vehicle to the destination. Used as the starting set of routes for the
  * column generation scheme
  */
-fun initialRoute(instance: Instance) : List<Route>{
+fun initialRoutes(instance: Instance, numRoutes: Int) : List<Route>{
     val graph: SetGraph = instance.graph
 
     val initialLabel = Label(instance.source, 0.0, 0.0, null, mutableListOf(instance.source))
@@ -104,10 +104,11 @@ fun initialRoute(instance: Instance) : List<Route>{
     loop@ while (unprocessedLabels.isNotEmpty()){
         val currentLabel = unprocessedLabels.last()
         if (currentLabel.vertex == instance.destination) {
-            // Route reaching the destination has been found. Finished search for an initial route.
+            unprocessedLabels.removeLast()
             routes.add(generateRoute(currentLabel))
 
-            break@loop
+            if (routes.size >= numRoutes)
+                break@loop
         }
         else {
             unprocessedLabels.removeLast()
