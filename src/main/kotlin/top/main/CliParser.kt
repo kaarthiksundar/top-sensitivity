@@ -8,12 +8,11 @@ import com.github.ajalt.clikt.parameters.types.int
 import mu.KotlinLogging
 
 private val log = KotlinLogging.logger {}
+
 /**
  * Class for parsing the command line arguments
  */
-
 class CliParser : CliktCommand() {
-
     /**
      * Name of the file containing the instance including the .txt extension.
      */
@@ -49,6 +48,7 @@ class CliParser : CliktCommand() {
             "Time limit should be a strictly positive integer"
         }
     }
+
     /**
      * Algorithm selection
      */
@@ -61,10 +61,7 @@ class CliParser : CliktCommand() {
         }
     }
 
-
     override fun run() {
         log.debug("reading command line arguments...")
     }
-
-
 }

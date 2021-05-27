@@ -5,7 +5,7 @@ import top.main.SetGraph
 import top.data.Route
 
 /**
- * Data class for constructing labels. These labels are used to enumerate all feasible paths in the graph.
+ * Class to build partial paths from source to any vertex in a graph.
  *
  * @param vertex Incident vertex of the path.
  * @param score Total score of the vertices in the partial path.
@@ -20,13 +20,32 @@ data class Label(
     val parent: Label?,
     val visitedVertices: MutableList<Int>
 ) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as Label
+
+        if (vertex != other.vertex) return false
+        if (length != other.length) return false
+        if (parent != other.parent) return false
+        if (visitedVertices != other.visitedVertices) return false
+
+        return true
+    }
+
     override fun hashCode(): Int {
-        return visitedVertices.hashCode()
+        var result = vertex
+        result = 31 * result + length.hashCode()
+        result = 31 * result + (parent?.hashCode() ?: 0)
+        result = 31 * result + visitedVertices.hashCode()
+        return result
     }
 }
 
 /**
  * Label extension function
+ *
  * @param label The label that needs to be extended
  * @param newVertex The incident vertex
  * @param edgeLength Length of the new edge
@@ -41,10 +60,12 @@ fun extend(
 ): Label {
     val newVisitedVertices = label.visitedVertices.toMutableList()
     newVisitedVertices.add(newVertex)
-    return Label(newVertex,
+    return Label(
+        newVertex,
         label.score + vertexScore,
         label.length + edgeLength,
-        label, newVisitedVertices)
+        label, newVisitedVertices
+    )
 }
 
 /**
@@ -54,12 +75,13 @@ fun extend(
  * starts at [Instance.source], and ends at [Instance.destination]
  *
  * @return Returns a list of [Route] objects corresponding to the feasible paths in [Instance.graph].
- *
  */
-fun enumeratePaths(instance: Instance) : List<Route> {
+fun enumeratePaths(instance: Instance): List<Route> {
     val graph: SetGraph = instance.graph
 
-    val initialLabel = Label(instance.source, 0.0, 0.0, null, mutableListOf(instance.source))
+    val initialLabel = Label(
+        instance.source, 0.0, 0.0, null, mutableListOf(instance.source)
+    )
 
     val unprocessedLabels = mutableListOf(initialLabel)
 
@@ -70,8 +92,7 @@ fun enumeratePaths(instance: Instance) : List<Route> {
         if (currentLabel.vertex == instance.destination) {
             unprocessedLabels.removeLast()
             routes.add(generateRoute(currentLabel))
-        }
-        else {
+        } else {
             unprocessedLabels.removeLast()
             val outgoingEdges = graph.outgoingEdgesOf(currentLabel.vertex)
             for (e in outgoingEdges) {
@@ -80,7 +101,8 @@ fun enumeratePaths(instance: Instance) : List<Route> {
                 val newVertex = graph.getEdgeTarget(e)
                 if (newVertex in currentLabel.visitedVertices || newLength > instance.budget)
                     continue
-                val newLabel = extend(currentLabel, newVertex, edgeLength, instance.scores[newVertex])
+                val newLabel =
+                    extend(currentLabel, newVertex, edgeLength, instance.scores[newVertex])
                 unprocessedLabels.add(newLabel)
             }
         }
@@ -89,19 +111,21 @@ fun enumeratePaths(instance: Instance) : List<Route> {
 }
 
 /**
- * Finds an initial route for a single vehicle to the destination. Used as the starting set of routes for the
- * column generation scheme
+ * Find an initial route for a single vehicle to the destination. Used as the starting set of
+ * routes for the column generation scheme.
  */
-fun initialRoutes(instance: Instance, numRoutes: Int) : List<Route>{
+fun initialRoutes(instance: Instance, numRoutes: Int): List<Route> {
     val graph: SetGraph = instance.graph
 
-    val initialLabel = Label(instance.source, 0.0, 0.0, null, mutableListOf(instance.source))
+    val initialLabel = Label(
+        instance.source, 0.0, 0.0, null, mutableListOf(instance.source)
+    )
 
     val unprocessedLabels = mutableListOf(initialLabel)
 
     val routes = mutableListOf<Route>()
 
-    loop@ while (unprocessedLabels.isNotEmpty()){
+    loop@ while (unprocessedLabels.isNotEmpty()) {
         val currentLabel = unprocessedLabels.last()
         if (currentLabel.vertex == instance.destination) {
             unprocessedLabels.removeLast()
@@ -109,8 +133,7 @@ fun initialRoutes(instance: Instance, numRoutes: Int) : List<Route>{
 
             if (routes.size >= numRoutes)
                 break@loop
-        }
-        else {
+        } else {
             unprocessedLabels.removeLast()
             val outgoingEdges = graph.outgoingEdgesOf(currentLabel.vertex)
             for (e in outgoingEdges) {
@@ -119,7 +142,8 @@ fun initialRoutes(instance: Instance, numRoutes: Int) : List<Route>{
                 val newVertex = graph.getEdgeTarget(e)
                 if (newVertex in currentLabel.visitedVertices || newLength > instance.budget)
                     continue
-                val newLabel = extend(currentLabel, newVertex, edgeLength, instance.scores[newVertex])
+                val newLabel =
+                    extend(currentLabel, newVertex, edgeLength, instance.scores[newVertex])
                 unprocessedLabels.add(newLabel)
             }
         }
@@ -129,11 +153,12 @@ fun initialRoutes(instance: Instance, numRoutes: Int) : List<Route>{
 }
 
 /**
- * Function to generate a route from destination label
+ * Generate a route from destination label
+ *
  * @param destinationLabel Label with vertex as destination
  * @return Returns an object of the [Route] class
  */
-fun generateRoute(destinationLabel: Label) : Route {
+fun generateRoute(destinationLabel: Label): Route {
     val path = mutableListOf<Int>()
     var label: Label? = destinationLabel
     while (label!!.parent != null) {

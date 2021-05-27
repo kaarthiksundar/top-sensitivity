@@ -7,8 +7,9 @@ import top.data.Route
 
 
 /**
- * Class for handling the restricted master problem (RMP) using a given set cover formulation of a restricted set
- * of admissible routes. The object will solve the master problem (MP) using column generation.
+ * Class to handle the restricted master problem (RMP) using a given set cover formulation of a
+ * restricted set of admissible routes. The object will solve the master problem (MP) using column
+ * generation.
  *
  * @param instance [Instance] object containing relevant problem information
  * @param cplex [IloCplex] object containing the CPLEX model of the set cover model
@@ -19,9 +20,8 @@ class ColumnGenerationSolver(
     private val cplex: IloCplex,
     private val parameters: Parameters
 ) {
-
     /**
-     * List of the [Route] objects to be used in the set cover model
+     * Routes to use in the set cover model
      */
     private var routes: MutableList<Route> = mutableListOf()
 
@@ -33,7 +33,7 @@ class ColumnGenerationSolver(
     /**
      * List of reduced costs from the dual values of the linear relaxation of the set cover model
      */
-    private var vertexReducedCosts = MutableList(instance.numVertices) {0.0}
+    private var vertexReducedCosts = MutableList(instance.numVertices) { 0.0 }
 
     /**
      * Value of the objective of the linear relaxation of the set cover model
@@ -42,25 +42,24 @@ class ColumnGenerationSolver(
         private set
 
     /**
-     * List of pairs of Route objects and the corresponding value of the route variable for the linear relaxation of
-     * the set cover model
+     * List of pairs of Route objects and the corresponding value of the route variable for the
+     * linear relaxation of the set cover model.
      */
     var lpSolution = mutableListOf<Pair<Route, Double>>()
 
     /**
      * Initially populating the list of routes using a specified number of feasible routes
      */
-    init{
-        // TODO: Check if there's a better way of doing this step.
+    init {
         routes.addAll(initialRoutes(instance, parameters.numInitialRoutes))
     }
 
     /**
-     * Function that uses column generation to solve the master problem (linear relaxation of the set cover model)
+     * Solve master problem (linear relaxation for set cover model) using column generation.
      */
-    fun solve(){
+    fun solve() {
         var columnGenIteration = 0
-        while (true){
+        while (true) {
 
             println("Column Generation Iteration: $columnGenIteration")
             println("Number of Routes: ${routes.size}")
@@ -69,14 +68,18 @@ class ColumnGenerationSolver(
             solveRestrictedMasterProblem()
 
             // Solving the pricing problem to generate columns to add to the restricted master problem
-            val newRoutes = PricingProblem(instance, vehicleCoverDual, vertexReducedCosts, parameters).generateColumns()
+            val newRoutes = PricingProblem(
+                instance,
+                vehicleCoverDual,
+                vertexReducedCosts,
+                parameters
+            ).generateColumns()
 
-            if (newRoutes.isEmpty()){
+            if (newRoutes.isEmpty()) {
                 // No more columns to add. LP optimal solution has been found
                 println("LP Optimal Solution Found")
                 break
-            }
-            else{
+            } else {
                 // LP optimal solution still not found. Adding routes to set cover model
                 routes.addAll(newRoutes)
                 columnGenIteration++
@@ -85,37 +88,33 @@ class ColumnGenerationSolver(
     }
 
     /**
-     * Function that solves the restricted master problem (linear relaxation of the set cover model using a subset
-     * of all feasible routes)
+     * Solve restricted master problem (linear relaxation of the set cover model using a subset
+     * of all feasible routes).
      */
-    private fun solveRestrictedMasterProblem(){
-
+    private fun solveRestrictedMasterProblem() {
         // Creating the restricted master problem and solving
-        // TODO: Check if combining these two lines would be better
         val setCoverModel = SetCoverModel(cplex)
         setCoverModel.createModel(instance, routes)
-
         setCoverModel.solve()
 
-        // Collecting the dual variable corresponding to the number of vehicles constraint, constraint (3).
+        // Collect dual variable corresponding to the number of vehicles constraint.
         vehicleCoverDual = setCoverModel.getRouteDual()
 
-        // Collecting the reduced costs of each vertex given the dual and prizes
+        // Collect reduced costs of each vertex given the dual and prizes.
         val vertexDuals = setCoverModel.getVertexDuals()
-        for (i in 0 until instance.numVertices){
+        for (i in 0 until instance.numVertices) {
             vertexReducedCosts[i] = vertexDuals[i] - instance.scores[i]
         }
 
-        // Updating values for LP solution. Parameter.eps used as a tolerance for whether a route is included
+        // Update LP solution values.
         lpObjective = setCoverModel.objective
         lpSolution.clear()
         val setCoverSolution = setCoverModel.getSolution()
-        for (i in setCoverSolution.indices){
-            if (setCoverSolution[i] >= parameters.eps){
+        for (i in setCoverSolution.indices) {
+            if (setCoverSolution[i] >= parameters.eps) {
                 lpSolution.add(Pair(routes[i], setCoverSolution[i]))
             }
         }
         cplex.clearModel()
     }
-
 }

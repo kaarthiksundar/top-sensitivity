@@ -26,12 +26,11 @@ fun main(args: Array<String>) {
 
     cgs.solve()
 
-    println("LP Objective: ${cgs.lpObjective}")
-    println("LP Solution: ${cgs.lpSolution}")
-
+    log.info("LP Objective: ${cgs.lpObjective}")
+    log.info("LP Solution: ${cgs.lpSolution}")
 }
 
-fun parseArgs(args: Array<String>) : Parameters {
+private fun parseArgs(args: Array<String>): Parameters {
     val parser = CliParser()
     parser.main(args)
     return Parameters(
