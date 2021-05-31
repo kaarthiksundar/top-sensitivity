@@ -64,7 +64,7 @@ dependencies {
 
     val cplexJarPath: String by project
     println("CPLEX JAR Path: $cplexJarPath")
-    implementation(files(cplexJarPath))
+    implementation(files(cplexJarPath.trim()))
 
     // Mathjax dokka
     implementation("org.jetbrains.dokka:mathjax-plugin:1.4.10.2")
@@ -89,7 +89,7 @@ tasks {
 
     withType<JavaExec> {
         val cplexLibPath: String by project
-        systemProperties["java.library.path"] = cplexLibPath
+        systemProperties["java.library.path"] = cplexLibPath.trim()
     }
 
     withType<Test> {
@@ -98,7 +98,7 @@ tasks {
         }
 
         val cplexLibPath: String by project
-        systemProperties["java.library.path"] = cplexLibPath
+        systemProperties["java.library.path"] = cplexLibPath.trim()
 
         addTestListener(object : TestListener {
             override fun beforeTest(p0: TestDescriptor?) = Unit
