@@ -4,12 +4,9 @@ application {
     // Define the main class for the application.
     mainClass.set("top.main.MainKt")
 
-    val cplexLibPath: String by project
-    println("CPLEX Lib Path: $cplexLibPath")
     applicationDefaultJvmArgs = listOf(
         "-Xms2g",
-        "-Xmx6g",
-        "-Djava.library.path=$cplexLibPath"
+        "-Xmx6g"
     )
 }
 
@@ -78,14 +75,6 @@ dependencies {
 }
 
 tasks {
-//    dokka {
-//        outputDirectory = "$buildDir/javadoc"
-//        configuration {
-//            includeNonPublic = true
-//            noStdlibLink = true
-//        }
-//    }
-
     register<Delete>("cleanLogs") {
         delete(fileTree("logs") {
             include("*.db", "*.log", "*.lp", "*.yaml")
@@ -98,10 +87,18 @@ tasks {
         }
     }
 
+    withType<JavaExec> {
+        val cplexLibPath: String by project
+        systemProperties["java.library.path"] = cplexLibPath
+    }
+
     withType<Test> {
         testLogging {
             showStandardStreams = true
         }
+
+        val cplexLibPath: String by project
+        systemProperties["java.library.path"] = cplexLibPath
 
         addTestListener(object : TestListener {
             override fun beforeTest(p0: TestDescriptor?) = Unit
