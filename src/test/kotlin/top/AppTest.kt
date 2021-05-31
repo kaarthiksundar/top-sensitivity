@@ -3,10 +3,11 @@
  */
 package top
 
-import org.junit.jupiter.api.Test
+import kotlin.test.Test
 
 class MainTest {
-    @Test fun testHelloWorld() {
+    @Test
+    fun `sample test`() {
         println("TOP should have a greeting")
     }
 }

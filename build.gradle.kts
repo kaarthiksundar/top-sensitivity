@@ -3,20 +3,16 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 application {
     // Define the main class for the application.
     mainClass.set("top.main.MainKt")
-//    val cplexLibPath: String by project
-    val cplexLibPath = "/Users/kaarthik/Applications/CPLEX_Studio1210/cplex/bin/x86-64_osx"
-//    val cplexLibPath = "C:\\Program Files\\IBM\\ILOG\\CPLEX_Studio_Community129\\cplex\\bin\\x64_win64\\"
-    println("CPLEX Lib Path: $cplexLibPath")
+
     applicationDefaultJvmArgs = listOf(
         "-Xms2g",
-        "-Xmx6g",
-        "-Djava.library.path=$cplexLibPath"
+        "-Xmx6g"
     )
 }
 
 plugins {
     // Apply the Kotlin JVM plugin to add support for Kotlin on the JVM.
-    kotlin("jvm") version "1.4.21"
+    kotlin("jvm") version "1.5.0"
 
     // Apply the application plugin to add support for building a CLI application.
     application
@@ -45,6 +41,9 @@ dependencies {
     // with version numbers managed by the BOM:
     // https://mvnrepository.com/artifact/org.jetbrains.kotlin/kotlin-bom
     testImplementation("org.jetbrains.kotlin:kotlin-test")
+
+    // Use the Kotlin JUnit integration.
+    testImplementation("org.jetbrains.kotlin:kotlin-test-junit")
     // --- Dependencies managed by BOM (end)   ---
 
     // coroutines
@@ -63,17 +62,12 @@ dependencies {
     // use JGraphT library
     implementation("org.jgrapht:jgrapht-core:1.5.0")
 
-//    val cplexJarPath: String by project
-    val cplexJarPath = "/Users/kaarthik/Applications/CPLEX_Studio1210/cplex/lib/cplex.jar"
-//    val cplexJarPath = "C:\\Program Files\\IBM\\ILOG\\CPLEX_Studio_Community129\\cplex\\lib\\cplex.jar"
+    val cplexJarPath: String by project
     println("CPLEX JAR Path: $cplexJarPath")
-    implementation(files(cplexJarPath))
+    implementation(files(cplexJarPath.trim()))
 
     // Mathjax dokka
     implementation("org.jetbrains.dokka:mathjax-plugin:1.4.10.2")
-
-    // Use the Kotlin JUnit integration.
-    testImplementation("org.junit.jupiter:junit-jupiter:5.6.2")
 
     // Jackson library to work with JSON/YAML.
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.12.0")
@@ -81,14 +75,6 @@ dependencies {
 }
 
 tasks {
-//    dokka {
-//        outputDirectory = "$buildDir/javadoc"
-//        configuration {
-//            includeNonPublic = true
-//            noStdlibLink = true
-//        }
-//    }
-
     register<Delete>("cleanLogs") {
         delete(fileTree("logs") {
             include("*.db", "*.log", "*.lp", "*.yaml")
@@ -101,10 +87,18 @@ tasks {
         }
     }
 
+    withType<JavaExec> {
+        val cplexLibPath: String by project
+        systemProperties["java.library.path"] = cplexLibPath.trim()
+    }
+
     withType<Test> {
         testLogging {
             showStandardStreams = true
         }
+
+        val cplexLibPath: String by project
+        systemProperties["java.library.path"] = cplexLibPath.trim()
 
         addTestListener(object : TestListener {
             override fun beforeTest(p0: TestDescriptor?) = Unit
@@ -114,7 +108,6 @@ tasks {
                 // printResults(desc, result)
             }
         })
-        useJUnitPlatform()
     }
 }
 
