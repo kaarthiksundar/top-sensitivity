@@ -1,13 +1,17 @@
 package top.branch
 
+import top.Util.EPS
 import java.time.ZonedDateTime
 
-data class Node(
+class Node(
     /**
      * Keys are variable ids. Values are integers to which variables are locked.
      */
     val restrictions: Map<Int, Int>,
-    val solved: Boolean = false,
+    /**
+     * LP objective of node whose branching creates the current node.
+     */
+    val parentLpObjective: Double,
     val lpFeasible: Boolean = false,
     val lpIntegral: Boolean = false,
     val lpObjective: Double = Double.MAX_VALUE,
@@ -16,8 +20,11 @@ data class Node(
     private val createdAt = ZonedDateTime.now()
 
     override fun compareTo(other: Node): Int = when {
-        lpObjective <= other.lpObjective - 1e-6 -> -1
-        lpObjective >= other.lpObjective + 1e-6 -> 1
+        parentLpObjective <= other.parentLpObjective - EPS -> -1
+        parentLpObjective >= other.parentLpObjective + EPS -> 1
         else -> createdAt.compareTo(other.createdAt)
     }
+
+    override fun toString(): String =
+        "Node(restrictions=$restrictions,obj=$lpObjective,sln=$lpSolution)"
 }
