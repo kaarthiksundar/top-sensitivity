@@ -10,14 +10,33 @@ import mu.KotlinLogging
 private val log = KotlinLogging.logger {}
 
 /**
- * Can only solve maximization problems. Convert min problems into max problems by multiplying the
- * objective by -1.
+ * Generic branch-and-bound algorithm that is agnostic of linear program solving, and focuses only
+ * on solving nodes in parallel and maintaining bounds, solutions and other statistics in a
+ * thread-safe manner.
+ *
+ * NOTE: This class can only solve maximization problems. Convert min problems into max problems by
+ * multiplying the objective by -1.
  */
 class BranchAndBoundSolver(private val solvers: List<ISolver>) {
+    /**
+     * Channel into which branch-and-bound nodes to be solved as restricted LPs will be sent.
+     */
     private val unsolvedChannel = Channel<Node>()
+
+    /**
+     * Channel into which solved nodes will be sent for pruning or branching.
+     */
     private val solvedChannel = Channel<Node>()
+
+    /**
+     * Channel that will receive a single value upon completion of branch-and-bound. The value will
+     * be a [Solution] object if a feasible integer solution is found, and null otherwise.
+     */
     private val solutionChannel = Channel<Solution?>()
 
+    /**
+     * Create a multi-threaded coroutine context and run the branch-and-bound algorithm in it.
+     */
     fun solve(branch: (Node) -> List<Node>): Solution? =
         runBlocking {
             withContext(Dispatchers.Default) {
@@ -25,6 +44,10 @@ class BranchAndBoundSolver(private val solvers: List<ISolver>) {
             }
         }
 
+    /**
+     * Run branch-and-bound in the [scope], the given coroutine scope. Use the given [branch]
+     * function to create new nodes from solved nodes with fractional solutions.
+     */
     private suspend fun runBranchAndBound(
         scope: CoroutineScope, branch: (Node) -> List<Node>
     ): Solution? {
