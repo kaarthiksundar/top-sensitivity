@@ -3,11 +3,6 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 application {
     // Define the main class for the application.
     mainClass.set("top.main.MainKt")
-
-    applicationDefaultJvmArgs = listOf(
-        "-Xms2g",
-        "-Xmx6g"
-    )
 }
 
 plugins {
@@ -89,16 +84,24 @@ tasks {
 
     withType<JavaExec> {
         val cplexLibPath: String by project
-        systemProperties["java.library.path"] = cplexLibPath.trim()
+        jvmArgs = listOf(
+            "-Xms32m",
+            "-Xmx4g",
+            "-Djava.library.path=${cplexLibPath.trim()}"
+        )
     }
 
     withType<Test> {
+        val cplexLibPath: String by project
+        jvmArgs = listOf(
+            "-Xms32m",
+            "-Xmx4g",
+            "-Djava.library.path=${cplexLibPath.trim()}"
+        )
+
         testLogging {
             showStandardStreams = true
         }
-
-        val cplexLibPath: String by project
-        systemProperties["java.library.path"] = cplexLibPath.trim()
 
         addTestListener(object : TestListener {
             override fun beforeTest(p0: TestDescriptor?) = Unit
