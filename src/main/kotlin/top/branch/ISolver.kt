@@ -1,5 +1,5 @@
 package top.branch
 
 interface ISolver {
-    fun solve(unsolvedNode: Node): Node
+    fun solve(unsolvedNode: INode): INode
 }

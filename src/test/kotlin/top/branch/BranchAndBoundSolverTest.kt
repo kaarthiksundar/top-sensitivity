@@ -14,9 +14,9 @@ class BranchAndBoundSolverTest {
                 val idGenerator = generateSequence(0) { it + 1 }.iterator()
                 val solvers = List(numSolvers) { CplexSolver(useModel1) }
                 val rootNode = Node(id = idGenerator.next())
-                val solution = BranchAndBoundSolver(solvers).solve(rootNode) {
-                    branch(it, idGenerator)
-                }
+                val solution = BranchAndBoundSolver(solvers) {
+                    branch((it as Node), idGenerator)
+                }.solve(rootNode)
                 assertNotNull(solution)
                 assertTrue(solution.numCreatedNodes > 1)
                 assertTrue(solution.numFeasibleNodes <= solution.numCreatedNodes)
@@ -30,6 +30,36 @@ class BranchAndBoundSolverTest {
                     assertEquals(1, solution.maxParallelSolves)
             }
         }
+    }
+}
+
+private data class Node(
+    private val id: Int,
+    /**
+     * Keys are variable ids. Values are integers to which variables are locked.
+     */
+    val restrictions: Map<Int, Int> = mapOf(),
+    override val parentLpObjective: Double = Double.MAX_VALUE,
+    override val lpFeasible: Boolean = false,
+    override val lpIntegral: Boolean = false,
+    override val lpObjective: Double = Double.MAX_VALUE,
+    val lpSolution: Map<Int, Double> = mapOf()
+) : INode {
+    override fun compareTo(other: INode): Int =
+        parentLpObjective.compareTo(other.parentLpObjective)
+
+    override fun toString(): String {
+        val clauses = mutableListOf("id=$id")
+        if (lpFeasible) {
+            if (parentLpObjective == Double.MAX_VALUE)
+                clauses.add("parentLp=$parentLpObjective")
+            else
+                clauses.add("parentLp=%.2f".format(parentLpObjective))
+            clauses.add("lp=%.2f".format(lpObjective))
+            clauses.add(if (lpIntegral) "integral" else "fractional")
+        } else clauses.add("infeasible")
+
+        return clauses.joinToString(",", "Node(", ")")
     }
 }
 
@@ -65,7 +95,8 @@ private class CplexSolver(private val model1: Boolean = true) : ISolver {
         return cplex.objValue
     }
 
-    override fun solve(unsolvedNode: Node): Node {
+    override fun solve(unsolvedNode: INode): INode {
+        (unsolvedNode as Node)
         cplex.clearModel()
         val x = cplex.numVarArray(if (model1) 4 else 6, 0.0, 1.0)
         if (model1)

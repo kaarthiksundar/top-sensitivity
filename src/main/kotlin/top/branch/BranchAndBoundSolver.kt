@@ -17,16 +17,19 @@ private val log = KotlinLogging.logger {}
  * NOTE: This class can only solve maximization problems. Convert min problems into max problems by
  * multiplying the objective by -1.
  */
-class BranchAndBoundSolver(private val solvers: List<ISolver>) {
+class BranchAndBoundSolver(
+    private val solvers: List<ISolver>,
+    private val branch: (INode) -> List<INode>
+) {
     /**
      * Channel into which branch-and-bound nodes to be solved as restricted LPs will be sent.
      */
-    private val unsolvedChannel = Channel<Node>()
+    private val unsolvedChannel = Channel<INode>()
 
     /**
      * Channel into which solved nodes will be sent for pruning or branching.
      */
-    private val solvedChannel = Channel<Node>()
+    private val solvedChannel = Channel<INode>()
 
     /**
      * Channel that will receive a single value upon completion of branch-and-bound. The value will
@@ -37,10 +40,10 @@ class BranchAndBoundSolver(private val solvers: List<ISolver>) {
     /**
      * Create a multi-threaded coroutine context and run the branch-and-bound algorithm in it.
      */
-    fun solve(rootNode: Node, branch: (Node) -> List<Node>): Solution? =
+    fun solve(rootNode: INode): Solution? =
         runBlocking {
             withContext(Dispatchers.Default) {
-                runBranchAndBound(this, rootNode, branch)
+                runBranchAndBound(this, rootNode)
             }
         }
 
@@ -49,11 +52,9 @@ class BranchAndBoundSolver(private val solvers: List<ISolver>) {
      * [rootNode] and use the given [branch] function to create new nodes from solved nodes with
      * fractional solutions.
      */
-    private suspend fun runBranchAndBound(
-        scope: CoroutineScope, rootNode: Node, branch: (Node) -> List<Node>
-    ): Solution? {
+    private suspend fun runBranchAndBound(scope: CoroutineScope, rootNode: INode): Solution? {
         prepareOptimizers(scope)
-        prepareSolvedNodeProcessing(scope, branch)
+        prepareSolvedNodeProcessing(scope)
         scope.launch {
             unsolvedChannel.send(rootNode)
         }
@@ -89,11 +90,10 @@ class BranchAndBoundSolver(private val solvers: List<ISolver>) {
      * branched, new unsolved nodes will be stored in the node processor's open node queue and
      * released to the unsolvedNodes channel whenever solvers are available.
      */
-    private suspend fun prepareSolvedNodeProcessing(
-        scope: CoroutineScope, branch: (Node) -> List<Node>
-    ) = scope.launch {
-        val nodeProcessor = NodeProcessor(solvers.size)
-        for (solvedNode in solvedChannel)
-            nodeProcessor.processNode(solvedNode, unsolvedChannel, solutionChannel, branch)
-    }
+    private suspend fun prepareSolvedNodeProcessing(scope: CoroutineScope) =
+        scope.launch {
+            val nodeProcessor = NodeProcessor(solvers.size)
+            for (solvedNode in solvedChannel)
+                nodeProcessor.processNode(solvedNode, unsolvedChannel, solutionChannel, branch)
+        }
 }

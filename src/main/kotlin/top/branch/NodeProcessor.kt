@@ -15,12 +15,12 @@ class NodeProcessor(private val numSolvers: Int) {
     /**
      * Best integer solution.
      */
-    private var incumbent: Node? = null
+    private var incumbent: INode? = null
 
     /**
      * Nodes created by branching and yet to be solved.
      */
-    private val unsolvedNodes = PriorityQueue<Node>()
+    private val unsolvedNodes = PriorityQueue<INode>()
 
     /**
      * The number of unsolved nodes sent for solving. It is initialized with 1 as the root node
@@ -46,10 +46,10 @@ class NodeProcessor(private val numSolvers: Int) {
     private var maxParallelSolves = 0
 
     suspend fun processNode(
-        solvedNode: Node,
-        unsolvedChannel: Channel<Node>,
+        solvedNode: INode,
+        unsolvedChannel: Channel<INode>,
         solutionChannel: Channel<Solution?>,
-        branch: (Node) -> List<Node>
+        branch: (INode) -> List<INode>
     ) {
         log.info { "processing $solvedNode" }
         --numSolving
