@@ -11,8 +11,12 @@ class BranchAndBoundSolverTest {
     fun `binary problems should be solved correctly in parallel and sequential modes`() {
         for (useModel1 in listOf(true, false)) {
             for (numSolvers in listOf(1, 5)) {
+                val idGenerator = generateSequence(0) { it + 1 }.iterator()
                 val solvers = List(numSolvers) { CplexSolver(useModel1) }
-                val solution = BranchAndBoundSolver(solvers).solve(::branch)
+                val rootNode = Node(id = idGenerator.next())
+                val solution = BranchAndBoundSolver(solvers).solve(rootNode) {
+                    branch(it, idGenerator)
+                }
                 assertNotNull(solution)
                 assertTrue(solution.numCreatedNodes > 1)
                 assertTrue(solution.numFeasibleNodes <= solution.numCreatedNodes)
@@ -75,10 +79,7 @@ private class CplexSolver(private val model1: Boolean = true) : ISolver {
 
         cplex.setOut(null)
         val eps = 1e-5
-        return if (!cplex.solve()) Node(
-            restrictions = unsolvedNode.restrictions,
-            parentLpObjective = unsolvedNode.parentLpObjective,
-        ) else {
+        return if (cplex.solve()) {
             val solutionMap = mutableMapOf<Int, Double>()
             var integral = true
             for ((i, xVar) in x.withIndex()) {
@@ -89,22 +90,20 @@ private class CplexSolver(private val model1: Boolean = true) : ISolver {
                         integral = false
                 }
             }
-            Node(
-                restrictions = unsolvedNode.restrictions,
-                parentLpObjective = unsolvedNode.parentLpObjective,
+            unsolvedNode.copy(
                 lpFeasible = true,
                 lpIntegral = integral,
                 lpObjective = cplex.objValue,
                 lpSolution = solutionMap
             )
-        }
+        } else unsolvedNode.copy(lpFeasible = false)
     }
 }
 
 /**
  * Branch on first fractional variable.
  */
-private fun branch(solvedNode: Node): List<Node> {
+private fun branch(solvedNode: Node, idGenerator: Iterator<Int>): List<Node> {
     for ((index, value) in solvedNode.lpSolution) {
         if (value >= 1 - Util.EPS)
             continue
@@ -112,6 +111,7 @@ private fun branch(solvedNode: Node): List<Node> {
         val restrictions = solvedNode.restrictions
         return listOf(0, 1).map {
             Node(
+                id = idGenerator.next(),
                 restrictions = restrictions.plus(Pair(index, it)),
                 parentLpObjective = solvedNode.lpObjective
             )

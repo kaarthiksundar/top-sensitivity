@@ -37,25 +37,25 @@ class BranchAndBoundSolver(private val solvers: List<ISolver>) {
     /**
      * Create a multi-threaded coroutine context and run the branch-and-bound algorithm in it.
      */
-    fun solve(branch: (Node) -> List<Node>): Solution? =
+    fun solve(rootNode: Node, branch: (Node) -> List<Node>): Solution? =
         runBlocking {
             withContext(Dispatchers.Default) {
-                runBranchAndBound(this, branch)
+                runBranchAndBound(this, rootNode, branch)
             }
         }
 
     /**
-     * Run branch-and-bound in the [scope], the given coroutine scope. Use the given [branch]
-     * function to create new nodes from solved nodes with fractional solutions.
+     * Run branch-and-bound in the [scope], the given coroutine scope. Start with solving the
+     * [rootNode] and use the given [branch] function to create new nodes from solved nodes with
+     * fractional solutions.
      */
     private suspend fun runBranchAndBound(
-        scope: CoroutineScope, branch: (Node) -> List<Node>
+        scope: CoroutineScope, rootNode: Node, branch: (Node) -> List<Node>
     ): Solution? {
         prepareOptimizers(scope)
         prepareSolvedNodeProcessing(scope, branch)
-
         scope.launch {
-            unsolvedChannel.send(Node(restrictions = mapOf(), parentLpObjective = Double.MAX_VALUE))
+            unsolvedChannel.send(rootNode)
         }
         val solution = solutionChannel.receive()
         log.info { "received solution" }
