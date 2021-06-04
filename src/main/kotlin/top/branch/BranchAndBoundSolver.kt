@@ -1,6 +1,5 @@
 package top.branch
 
-import ilog.cplex.IloCplex
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import mu.KotlinLogging
@@ -14,24 +13,22 @@ private val log = KotlinLogging.logger {}
  * Can only solve maximization problems. Convert min problems into max problems by multiplying the
  * objective by -1.
  */
-class BranchAndBoundSolver(private val numSolvers: Int) {
+class BranchAndBoundSolver(private val solvers: List<ISolver>) {
     private val unsolvedChannel = Channel<Node>()
     private val solvedChannel = Channel<Node>()
     private val solutionChannel = Channel<Solution?>()
 
-    fun solve(solveNode: (Node, IloCplex) -> Node, branch: (Node) -> List<Node>): Solution? =
+    fun solve(branch: (Node) -> List<Node>): Solution? =
         runBlocking {
             withContext(Dispatchers.Default) {
-                runBranchAndBound(this, solveNode, branch)
+                runBranchAndBound(this, branch)
             }
         }
 
     private suspend fun runBranchAndBound(
-        scope: CoroutineScope,
-        solveNode: (Node, IloCplex) -> Node,
-        branch: (Node) -> List<Node>
+        scope: CoroutineScope, branch: (Node) -> List<Node>
     ): Solution? {
-        prepareOptimizers(scope, solveNode)
+        prepareOptimizers(scope)
         prepareSolvedNodeProcessing(scope, branch)
 
         scope.launch {
@@ -54,14 +51,11 @@ class BranchAndBoundSolver(private val numSolvers: Int) {
      * the CPLEX object and the solveNode() function call will persist as long as the for loop is
      * suspended. We will go out of scope only when the unsolvedNodes channel is closed.
      */
-    private suspend fun prepareOptimizers(
-        scope: CoroutineScope, solveNode: (Node, IloCplex) -> Node
-    ) {
-        repeat(numSolvers) {
+    private suspend fun prepareOptimizers(scope: CoroutineScope) {
+        for (solver in solvers) {
             scope.launch {
-                val cplex = IloCplex()
                 for (unsolvedNode in unsolvedChannel)
-                    solvedChannel.send(solveNode(unsolvedNode, cplex))
+                    solvedChannel.send(solver.solve(unsolvedNode))
             }
         }
     }
@@ -75,7 +69,7 @@ class BranchAndBoundSolver(private val numSolvers: Int) {
     private suspend fun prepareSolvedNodeProcessing(
         scope: CoroutineScope, branch: (Node) -> List<Node>
     ) = scope.launch {
-        val nodeProcessor = NodeProcessor(numSolvers)
+        val nodeProcessor = NodeProcessor(solvers.size)
         for (solvedNode in solvedChannel)
             nodeProcessor.processNode(solvedNode, unsolvedChannel, solutionChannel, branch)
     }
