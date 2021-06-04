@@ -1,4 +1,4 @@
-package top.branch
+package branchandbound
 
 data class Solution(
     val objective: Double,

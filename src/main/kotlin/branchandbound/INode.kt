@@ -1,4 +1,4 @@
-package top.branch
+package branchandbound
 
 interface INode : Comparable<INode> {
     val parentLpObjective: Double
