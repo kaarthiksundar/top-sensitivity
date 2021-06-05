@@ -1,6 +1,6 @@
 package branchandbound
 
-import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.SendChannel
 import mu.KotlinLogging
 import top.Util
 import java.util.*
@@ -47,8 +47,8 @@ class NodeProcessor(private val numSolvers: Int) {
 
     suspend fun processNode(
         solvedNode: INode,
-        unsolvedChannel: Channel<INode>,
-        solutionChannel: Channel<Solution?>,
+        unsolvedChannel: SendChannel<INode>,
+        solutionChannel: SendChannel<Solution?>,
         branch: (INode) -> List<INode>
     ) {
         log.info { "processing $solvedNode" }
@@ -78,7 +78,7 @@ class NodeProcessor(private val numSolvers: Int) {
             sendSolution(solutionChannel)
     }
 
-    private suspend fun sendSolution(solutionChannel: Channel<Solution?>) {
+    private suspend fun sendSolution(solutionChannel: SendChannel<Solution?>) {
         log.info { "number of nodes created: $numCreated" }
         log.info { "number of feasible nodes: $numFeasible" }
         log.info { "maximum parallel solves: $maxParallelSolves" }
