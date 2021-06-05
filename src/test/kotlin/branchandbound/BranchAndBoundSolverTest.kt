@@ -11,7 +11,7 @@ class BranchAndBoundSolverTest {
     fun `binary problems should be solved correctly in parallel and sequential modes`() {
         for (useModel1 in listOf(true, false)) {
             for (numSolvers in listOf(1, 5)) {
-                val idGenerator = generateSequence(0) { it + 1 }.iterator()
+                val idGenerator = generateSequence(0L) { it + 1 }.iterator()
                 val solvers = List(numSolvers) { CplexSolver(useModel1) }
                 val rootNode = Node(id = idGenerator.next())
                 val solution = BranchAndBoundSolver(solvers) {
@@ -34,7 +34,7 @@ class BranchAndBoundSolverTest {
 }
 
 private data class Node(
-    private val id: Int,
+    override val id: Long,
     /**
      * Keys are variable ids. Values are integers to which variables are locked.
      */
@@ -134,7 +134,7 @@ private class CplexSolver(private val model1: Boolean = true) : ISolver {
 /**
  * Branch on first fractional variable.
  */
-private fun branch(solvedNode: Node, idGenerator: Iterator<Int>): List<Node> {
+private fun branch(solvedNode: Node, idGenerator: Iterator<Long>): List<Node> {
     for ((index, value) in solvedNode.lpSolution) {
         if (value >= 1 - Util.EPS)
             continue
