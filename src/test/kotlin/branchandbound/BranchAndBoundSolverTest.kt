@@ -11,7 +11,7 @@ class BranchAndBoundSolverTest {
     fun `binary problems should be solved correctly in parallel and sequential modes`() {
         for (useModel1 in listOf(true, false)) {
             for (numSolvers in listOf(1, 5)) {
-                val idGenerator = generateSequence(0) { it + 1 }.iterator()
+                val idGenerator = generateSequence(0L) { it + 1 }.iterator()
                 val solvers = List(numSolvers) { CplexSolver(useModel1) }
                 val rootNode = Node(id = idGenerator.next())
                 val solution = BranchAndBoundSolver(solvers) {
@@ -34,12 +34,13 @@ class BranchAndBoundSolverTest {
 }
 
 private data class Node(
-    private val id: Int,
+    override val id: Long,
     /**
      * Keys are variable ids. Values are integers to which variables are locked.
      */
     val restrictions: Map<Int, Int> = mapOf(),
     override val parentLpObjective: Double = Double.MAX_VALUE,
+    val lpSolved: Boolean = false,
     override val lpFeasible: Boolean = false,
     override val lpIntegral: Boolean = false,
     override val lpObjective: Double = Double.MAX_VALUE,
@@ -50,11 +51,13 @@ private data class Node(
 
     override fun toString(): String {
         val clauses = mutableListOf("id=$id")
-        if (lpFeasible) {
-            if (parentLpObjective == Double.MAX_VALUE)
-                clauses.add("parentLp=$parentLpObjective")
-            else
-                clauses.add("parentLp=%.2f".format(parentLpObjective))
+        if (parentLpObjective == Double.MAX_VALUE)
+            clauses.add("parentLp=$parentLpObjective")
+        else
+            clauses.add("parentLp=%.2f".format(parentLpObjective))
+        if (!lpSolved)
+            clauses.add("unsolved")
+        else if (lpFeasible) {
             clauses.add("lp=%.2f".format(lpObjective))
             clauses.add(if (lpIntegral) "integral" else "fractional")
         } else clauses.add("infeasible")
@@ -122,19 +125,20 @@ private class CplexSolver(private val model1: Boolean = true) : ISolver {
                 }
             }
             unsolvedNode.copy(
+                lpSolved = true,
                 lpFeasible = true,
                 lpIntegral = integral,
                 lpObjective = cplex.objValue,
                 lpSolution = solutionMap
             )
-        } else unsolvedNode.copy(lpFeasible = false)
+        } else unsolvedNode.copy(lpSolved = true, lpFeasible = false)
     }
 }
 
 /**
  * Branch on first fractional variable.
  */
-private fun branch(solvedNode: Node, idGenerator: Iterator<Int>): List<Node> {
+private fun branch(solvedNode: Node, idGenerator: Iterator<Long>): List<Node> {
     for ((index, value) in solvedNode.lpSolution) {
         if (value >= 1 - Util.EPS)
             continue
