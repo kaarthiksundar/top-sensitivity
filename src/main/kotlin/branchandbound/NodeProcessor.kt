@@ -86,8 +86,14 @@ class NodeProcessor(private val numSolvers: Int) {
         log.info { "processing $solvedNode" }
         leafUpperBounds.remove(solvedNode.id)
         --numSolving
+
         if (solvedNode.lpFeasible)
             ++numFeasible
+
+        solvedNode.mipObjective?.let {
+            if (it >= lowerBound + Util.EPS)
+                updateLowerBound(solvedNode)
+        }
 
         if (!prune(solvedNode))
             branchFrom(solvedNode, branch)
@@ -119,17 +125,13 @@ class NodeProcessor(private val numSolvers: Int) {
      * So, it can be pruned by integrality. Here, the incumbent needs to be replaced with
      * [solvedNode] if the latter's objective is smaller than the former's.
      *
-     * As the upper bound is maintained as the maximum of the LP upper bounds of all leaf nodes, one
-     * can ask whether the objective of [solvedNode] should be maintained as one of the candidates
-     * from which the upper bound is calculated. The answer is no. The objective of [solvedNode] is
-     * in fact a lower bound that is automatically maintained because of the update of [incumbent].
-     * As any leaf node with a LP objective less than or equal to the lower bound gets pruned by
-     * bound, leaves with integer solutions do not need to contribute to the upper bound.
-     *
-     * If we improve [incumbent] and hence [lowerBound], we have to update upper bounds too. As all
-     * unsolved nodes with LP bounds smaller than the new lower bound are going to be pruned when
-     * they come back, we have to remove them as candidates from the map. This will avoid the
-     * upper bound becoming smaller than the lower bound.
+     * As the upper bound is maintained as the maximum of the LP upper bounds of all leaf nodes,
+     * one can ask whether the objective of [solvedNode] should be maintained as one of the
+     * candidates from which the upper bound is calculated. The answer is no. The objective of
+     * [solvedNode] is in fact a lower bound that is automatically maintained because of the update
+     * of [incumbent]. As any leaf node with a LP objective less than or equal to the lower bound
+     * gets pruned by bound, leaves with integer solutions do not need to contribute to the upper
+     * bound.
      */
     private fun prune(solvedNode: INode): Boolean {
         if (!solvedNode.lpFeasible) {
@@ -144,17 +146,26 @@ class NodeProcessor(private val numSolvers: Int) {
         }
         if (solvedNode.lpIntegral) {
             log.debug { "$solvedNode pruned by integrality" }
-            incumbent = solvedNode
-            lowerBound = solvedNode.lpObjective
-
-            // Remove bounds of leaf nodes that are going to be pruned by bound because of the new
-            // lower bound.
-            leafUpperBounds.entries.removeAll {
-                it.value <= solvedNode.lpObjective
-            }
+            updateLowerBound(solvedNode)
             return true
         }
         return false
+    }
+
+    /**
+     * Perform all tasks related to updating the global lower bound.
+     *
+     * If we improve [incumbent] and hence [lowerBound], we have to update upper bounds too. As all
+     * unsolved nodes with LP bounds smaller than the new lower bound are going to be pruned when
+     * they come back, we have to remove them as candidates from the map. This will avoid the
+     * upper bound becoming smaller than the lower bound.
+     */
+    private fun updateLowerBound(node: INode) {
+        incumbent = node
+        lowerBound = node.mipObjective ?: node.lpObjective
+        leafUpperBounds.entries.removeAll {
+            it.value <= lowerBound
+        }
     }
 
     /**
