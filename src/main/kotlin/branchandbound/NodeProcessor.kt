@@ -45,6 +45,38 @@ class NodeProcessor(private val numSolvers: Int) {
      */
     private var maxParallelSolves = 0
 
+    /**
+     * This map can be used to find the upper bound at any time. Its values are the upper bounds
+     * of LP solutions of all unsolved (or solving) leaf nodes that may have a fractional solution.
+     * This map is modified in two cases:
+     *
+     * - When we branch on a node to create child nodes, the node's LP objective is an upper bound
+     *   to the solution of all child nodes. This LP objective is tagged with each child node's id
+     *   and placed in this mpa.
+     *
+     * - When we receive a solved node in [processNode], it will cease to be a leaf node as we will
+     *   either prune it or branch from it. So, its id (and corresponding value) will be removed
+     *   from this map.
+     *
+     * The main idea of correctness of this upper bound is that at any time during the evolution of
+     * the branch and bound tree, the leaf nodes always describe the solution space completely. If
+     * leaf nodes are known to be integral, they contribute to the lower bound. If leaf nodes may
+     * be fractional (as they haven't been solved yet), upper bounds on their objectives
+     * (identified as the LP objective of their immediate parents) become candidates for upper
+     * bounds. The global upper bound then becomes the maximum of upper bounds of all unsolved
+     * nodes.
+     */
+    private val leafUpperBounds = mutableMapOf<Long, Double>()
+
+    private var lowerBound: Double = -Double.MAX_VALUE
+    private var upperBound: Double = Double.MAX_VALUE
+
+    /**
+     * Process the given [solvedNode] assuming that its LP solution or infeasibility is known.
+     *
+     * This processing includes deciding to prune or branch the node, and updating lower/upper
+     * bounds and the incumbent solution.
+     */
     suspend fun processNode(
         solvedNode: INode,
         unsolvedChannel: SendChannel<INode>,
@@ -52,20 +84,19 @@ class NodeProcessor(private val numSolvers: Int) {
         branch: (INode) -> List<INode>
     ) {
         log.info { "processing $solvedNode" }
+        leafUpperBounds.remove(solvedNode.id)
         --numSolving
-
-        if (solvedNode.lpFeasible &&
-            (incumbent == null || incumbent!!.lpObjective <= solvedNode.lpObjective - Util.EPS)
-        ) {
+        if (solvedNode.lpFeasible)
             ++numFeasible
-            if (solvedNode.lpIntegral)
-                incumbent = solvedNode
-            else {
-                val children = branch(solvedNode)
-                numCreated += children.size
-                unsolvedNodes.addAll(children)
-            }
+
+        if (!prune(solvedNode))
+            branchFrom(solvedNode, branch)
+
+        leafUpperBounds.values.maxOrNull()?.let {
+            upperBound = it
         }
+        if (lowerBound >= upperBound + Util.EPS)
+            throw BranchAndBoundException("LB $lowerBound bigger than UB $upperBound")
 
         while (unsolvedNodes.isNotEmpty() && numSolving < numSolvers) {
             unsolvedChannel.send(unsolvedNodes.remove())
@@ -76,6 +107,71 @@ class NodeProcessor(private val numSolvers: Int) {
 
         if (unsolvedNodes.isEmpty() && numSolving == 0)
             sendSolution(solutionChannel)
+    }
+
+    /**
+     * Prune [solvedNode] if required. Return true if pruned and false otherwise.
+     *
+     * Pruning occurs if [solvedNode] is infeasible or has a smaller LP objective than that of
+     * [incumbent], i.e. the best known integer solution. For these cases, the node can be
+     * discarded without further processing. If [solvedNode] has an integer LP solution, we don't
+     * need to branch on it as we already know the best possible integer solution from the node.
+     * So, it can be pruned by integrality. Here, the incumbent needs to be replaced with
+     * [solvedNode] if the latter's objective is smaller than the former's.
+     *
+     * As the upper bound is maintained as the maximum of the LP upper bounds of all leaf nodes, one
+     * can ask whether the objective of [solvedNode] should be maintained as one of the candidates
+     * from which the upper bound is calculated. The answer is no. The objective of [solvedNode] is
+     * in fact a lower bound that is automatically maintained because of the update of [incumbent].
+     * As any leaf node with a LP objective less than or equal to the lower bound gets pruned by
+     * bound, leaves with integer solutions do not need to contribute to the upper bound.
+     *
+     * If we improve [incumbent] and hence [lowerBound], we have to update upper bounds too. As all
+     * unsolved nodes with LP bounds smaller than the new lower bound are going to be pruned when
+     * they come back, we have to remove them as candidates from the map. This will avoid the
+     * upper bound becoming smaller than the lower bound.
+     */
+    private fun prune(solvedNode: INode): Boolean {
+        if (!solvedNode.lpFeasible) {
+            log.debug { "$solvedNode pruned by infeasibility" }
+            return true
+        }
+        incumbent?.lpObjective?.let {
+            if (it >= solvedNode.lpObjective) {
+                log.debug { "$solvedNode pruned by bound" }
+                return true
+            }
+        }
+        if (solvedNode.lpIntegral) {
+            log.debug { "$solvedNode pruned by integrality" }
+            incumbent = solvedNode
+            lowerBound = solvedNode.lpObjective
+
+            // Remove bounds of leaf nodes that are going to be pruned by bound because of the new
+            // lower bound.
+            leafUpperBounds.entries.removeAll {
+                it.value <= solvedNode.lpObjective
+            }
+            return true
+        }
+        return false
+    }
+
+    /**
+     * Create child nodes of [solvedNode] using the specified branching function [branch].
+     *
+     * As the LP objective of [solvedNode] is an upper bound of all child nodes created here, it
+     * needs to be stored in the [leafUpperBounds] map to dynamically update the upper bound. Refer
+     * to the documentation of [leafUpperBounds] for details about upper bound maintenance.
+     */
+    private fun branchFrom(solvedNode: INode, branch: (INode) -> List<INode>) {
+        log.debug { "$solvedNode branched from" }
+        val children = branch(solvedNode)
+        numCreated += children.size
+        for (childNode in children) {
+            unsolvedNodes.add(childNode)
+            leafUpperBounds[childNode.id] = childNode.parentLpObjective
+        }
     }
 
     private suspend fun sendSolution(solutionChannel: SendChannel<Solution?>) {

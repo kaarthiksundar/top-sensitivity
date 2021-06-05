@@ -40,6 +40,7 @@ private data class Node(
      */
     val restrictions: Map<Int, Int> = mapOf(),
     override val parentLpObjective: Double = Double.MAX_VALUE,
+    val lpSolved: Boolean = false,
     override val lpFeasible: Boolean = false,
     override val lpIntegral: Boolean = false,
     override val lpObjective: Double = Double.MAX_VALUE,
@@ -50,11 +51,13 @@ private data class Node(
 
     override fun toString(): String {
         val clauses = mutableListOf("id=$id")
-        if (lpFeasible) {
-            if (parentLpObjective == Double.MAX_VALUE)
-                clauses.add("parentLp=$parentLpObjective")
-            else
-                clauses.add("parentLp=%.2f".format(parentLpObjective))
+        if (parentLpObjective == Double.MAX_VALUE)
+            clauses.add("parentLp=$parentLpObjective")
+        else
+            clauses.add("parentLp=%.2f".format(parentLpObjective))
+        if (!lpSolved)
+            clauses.add("unsolved")
+        else if (lpFeasible) {
             clauses.add("lp=%.2f".format(lpObjective))
             clauses.add(if (lpIntegral) "integral" else "fractional")
         } else clauses.add("infeasible")
@@ -122,12 +125,13 @@ private class CplexSolver(private val model1: Boolean = true) : ISolver {
                 }
             }
             unsolvedNode.copy(
+                lpSolved = true,
                 lpFeasible = true,
                 lpIntegral = integral,
                 lpObjective = cplex.objValue,
                 lpSolution = solutionMap
             )
-        } else unsolvedNode.copy(lpFeasible = false)
+        } else unsolvedNode.copy(lpSolved = true, lpFeasible = false)
     }
 }
 
