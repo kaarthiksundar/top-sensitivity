@@ -19,6 +19,7 @@ private val log = KotlinLogging.logger {}
  */
 class BranchAndBoundSolver(
     private val solvers: List<ISolver>,
+    private val selectionStrategy: SelectionStrategy = SelectionStrategy.BEST_BOUND,
     private val branch: (INode) -> List<INode>
 ) {
     /**
@@ -92,7 +93,10 @@ class BranchAndBoundSolver(
      */
     private suspend fun prepareSolvedNodeProcessing(scope: CoroutineScope) =
         scope.launch {
-            val nodeProcessor = NodeProcessor(solvers.size)
+            val comparator =
+                if (selectionStrategy == SelectionStrategy.BEST_BOUND) BestBoundComparator()
+                else WorstBoundComparator()
+            val nodeProcessor = NodeProcessor(solvers.size, comparator)
             for (solvedNode in solvedChannel)
                 nodeProcessor.processNode(solvedNode, unsolvedChannel, solutionChannel, branch)
         }

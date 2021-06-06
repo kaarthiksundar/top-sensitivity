@@ -46,8 +46,7 @@ private data class Node(
     override val lpObjective: Double = Double.MAX_VALUE,
     val lpSolution: Map<Int, Double> = mapOf()
 ) : INode {
-    override fun compareTo(other: INode): Int =
-        parentLpObjective.compareTo(other.parentLpObjective)
+    override val mipObjective: Double? = null
 
     override fun toString(): String {
         val clauses = mutableListOf("id=$id")
