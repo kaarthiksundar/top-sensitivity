@@ -1,6 +1,6 @@
 package branchandbound
 
-interface INode : Comparable<INode> {
+interface INode {
     val id: Long
     val parentLpObjective: Double
     val lpFeasible: Boolean

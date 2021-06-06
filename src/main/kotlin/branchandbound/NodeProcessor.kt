@@ -11,16 +11,17 @@ import kotlin.math.max
  */
 private val log = KotlinLogging.logger {}
 
-class NodeProcessor(private val numSolvers: Int) {
+class NodeProcessor(private val numSolvers: Int, comparator: Comparator<INode>) {
     /**
      * Best integer solution.
      */
     private var incumbent: INode? = null
 
     /**
-     * Nodes created by branching and yet to be solved.
+     * Nodes created by branching and yet to be solved. This is a min-priority queue, that is, it
+     * selects the "least" node in the queue based on the given comparator.
      */
-    private val unsolvedNodes = PriorityQueue<INode>()
+    private val unsolvedNodes = PriorityQueue(comparator)
 
     /**
      * The number of unsolved nodes sent for solving. It is initialized with 1 as the root node
