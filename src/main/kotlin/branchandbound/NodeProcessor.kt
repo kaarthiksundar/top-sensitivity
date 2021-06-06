@@ -135,17 +135,17 @@ class NodeProcessor(private val numSolvers: Int) {
      */
     private fun prune(solvedNode: INode): Boolean {
         if (!solvedNode.lpFeasible) {
-            log.debug { "$solvedNode pruned by infeasibility" }
+            log.debug { "Node ${solvedNode.id} pruned by infeasibility" }
             return true
         }
         incumbent?.lpObjective?.let {
             if (it >= solvedNode.lpObjective) {
-                log.debug { "$solvedNode pruned by bound" }
+                log.debug { "Node ${solvedNode.id} pruned by bound" }
                 return true
             }
         }
         if (solvedNode.lpIntegral) {
-            log.debug { "$solvedNode pruned by integrality" }
+            log.debug { "Node ${solvedNode.id} pruned by integrality" }
             updateLowerBound(solvedNode)
             return true
         }
@@ -176,7 +176,7 @@ class NodeProcessor(private val numSolvers: Int) {
      * to the documentation of [leafUpperBounds] for details about upper bound maintenance.
      */
     private fun branchFrom(solvedNode: INode, branch: (INode) -> List<INode>) {
-        log.debug { "$solvedNode branched from" }
+        log.debug { "Node ${solvedNode.id} branched" }
         val children = branch(solvedNode)
         numCreated += children.size
         for (childNode in children) {
@@ -194,6 +194,7 @@ class NodeProcessor(private val numSolvers: Int) {
             incumbent?.let {
                 Solution(
                     objective = it.lpObjective,
+                    incumbent = incumbent,
                     numCreatedNodes = numCreated,
                     numFeasibleNodes = numFeasible,
                     maxParallelSolves = maxParallelSolves
