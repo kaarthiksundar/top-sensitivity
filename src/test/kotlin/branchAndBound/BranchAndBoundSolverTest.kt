@@ -1,4 +1,4 @@
-package branchandbound
+package branchAndBound
 
 import ilog.concert.IloNumVar
 import ilog.concert.IloNumVarType

@@ -1,4 +1,4 @@
-package branchandbound
+package branchAndBound
 
 /**
  * Indicator for how an unsolved node will be selected for solving and post-processing.

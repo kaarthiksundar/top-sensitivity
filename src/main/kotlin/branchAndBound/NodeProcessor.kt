@@ -1,4 +1,4 @@
-package branchandbound
+package branchAndBound
 
 import kotlinx.coroutines.channels.SendChannel
 import mu.KotlinLogging

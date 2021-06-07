@@ -1,4 +1,4 @@
-package branchandbound
+package branchAndBound
 
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
@@ -40,6 +40,8 @@ class BranchAndBoundSolver(
 
     /**
      * Create a multi-threaded coroutine context and run the branch-and-bound algorithm in it.
+     *
+     * @param rootNode
      */
     fun solve(rootNode: INode): Solution? =
         runBlocking {
