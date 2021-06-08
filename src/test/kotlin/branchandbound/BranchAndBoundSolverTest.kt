@@ -1,13 +1,15 @@
 package branchandbound
 
-import kotlin.test.*
+import branchandbound.algorithm.BranchAndBoundSolver
 import branchandbound.examples.Node
+import kotlin.test.*
 import branchandbound.examples.Solver
 import branchandbound.examples.branch
 
 class BranchAndBoundSolverTest {
 
     private val eps = 1e-5
+
     @Test
     fun `tests for serial and parallel B&B solves`() {
         val problemIds = listOf(1, 2)
@@ -16,7 +18,8 @@ class BranchAndBoundSolverTest {
             for (numSolvers in listOf(1, 5)) {
                 val idGenerator = generateSequence(0L) { it + 1 }.iterator()
                 val solvers = List(numSolvers) {
-                    Solver(problem!!.profit, problem.weight, problem.capacity) }
+                    Solver(problem!!.profit, problem.weight, problem.capacity)
+                }
                 val rootNode = Node(id = idGenerator.next())
 
                 val solution = BranchAndBoundSolver(solvers) {
