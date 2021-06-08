@@ -15,8 +15,9 @@ data class Node(
     val lpSolved: Boolean = false,
     override val lpFeasible: Boolean = false,
     override val lpIntegral: Boolean = false,
-    override val lpObjective: Double = Double.MAX_VALUE,
-    val lpSolution: Map<Int, Double> = mapOf()
+    override val lpObjective: Double = 0.0,
+    val lpSolution: Map<Int, Double> = mapOf(),
+    val remainingCapacity: Double = 0.0
 ) : INode {
     override val mipObjective: Double? = null
 

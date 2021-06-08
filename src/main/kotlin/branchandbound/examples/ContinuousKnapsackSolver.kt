@@ -16,64 +16,23 @@ class ContinuousKnapsackSolver(
     private val weights: List<Double>,
     private val capacity: Double
 ) : ISolver {
-    /**
-     * Class that stores intermediate knapsack states when placing items in the knapsack.
-     */
-    private data class KnapsackState(
-        val capacity: Double,
-        val profit: Double,
-        val solution: Map<Int, Double>,
-        val integral: Boolean
-    ) {
-        val feasible: Boolean
-            get() = capacity >= 0.0
-    }
-
     private val eps = 1e-6
 
     override fun solve(unsolvedNode: INode): INode {
-        // Check if restrictions are feasible.
         (unsolvedNode as Node)
         val restrictions = unsolvedNode.restrictions
-        val initialState = getInitialState(restrictions)
-        if (!initialState.feasible)
-            return unsolvedNode.copy(lpSolved = true, lpFeasible = false)
-
-        // Update solution with greedy algorithm.
-        val indices = getIndicesSortedByUtility(restrictions.keys.toSet())
-        val finalState = indices.fold(initialState) { ks, i ->
-            val w = weights[i]
-            val proportion = min(ks.capacity, w) / w
-            if (proportion <= eps) ks
-            else ks.copy(
-                capacity = ks.capacity - (w * proportion),
-                profit = ks.profit + (profits[i] * proportion),
-                solution = ks.solution.plus(Pair(i, proportion)),
-                integral = ks.integral && proportion >= 1 - eps
-            )
-        }
-        return unsolvedNode.copy(
-            lpSolved = true,
-            lpFeasible = true,
-            lpIntegral = finalState.integral,
-            lpObjective = finalState.profit,
-            lpSolution = finalState.solution
-        )
+        val node = applyRestrictions(unsolvedNode)
+        return if (node.remainingCapacity < 0.0) node.copy(lpSolved = true, lpFeasible = false)
+        else runGreedyAlgorithm(node, getIndicesSortedByUtility(restrictions.keys.toSet()))
     }
 
-    private fun getInitialState(restrictions: Map<Int, Int>): KnapsackState =
-        restrictions.entries.fold(
-            KnapsackState(
-                capacity,
-                0.0,
-                restrictions.filterValues { it > 0 }.mapValues { it.value.toDouble() },
-                true
-            )
-        ) { ks, entry ->
-            if (entry.value == 0) ks
-            else ks.copy(
-                capacity = ks.capacity - weights[entry.key],
-                profit = ks.profit + profits[entry.key]
+    private fun applyRestrictions(node: Node): Node =
+        node.restrictions.entries.fold(node.copy(remainingCapacity = capacity, lpIntegral = true))
+        { n, entry ->
+            if (entry.value == 0) n
+            else n.copy(
+                remainingCapacity = n.remainingCapacity - weights[entry.key],
+                lpObjective = n.lpObjective + profits[entry.key]
             )
         }
 
@@ -81,4 +40,17 @@ class ContinuousKnapsackSolver(
         profits.indices.asSequence().filter { it !in fixed }.map { i ->
             Pair(i, profits[i] / weights[i])
         }.sortedByDescending { it.second }.asSequence().map { it.first }.toList()
+
+    private fun runGreedyAlgorithm(initialNode: Node, sortedIndices: List<Int>): Node =
+        sortedIndices.fold(initialNode) { node, i ->
+            val w = weights[i]
+            val proportion = min(node.remainingCapacity, w) / w
+            if (proportion <= eps) node
+            else node.copy(
+                remainingCapacity = node.remainingCapacity - (w * proportion),
+                lpObjective = node.lpObjective + (profits[i] * proportion),
+                lpSolution = node.lpSolution.plus(Pair(i, proportion)),
+                lpIntegral = node.lpIntegral && proportion >= 1 - eps
+            )
+        }.copy(lpSolved = true, lpFeasible = true)
 }

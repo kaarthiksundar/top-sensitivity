@@ -3,7 +3,6 @@ package branchandbound
 import branchandbound.algorithm.BranchAndBoundSolver
 import branchandbound.examples.ContinuousKnapsackSolver
 import branchandbound.examples.Node
-import branchandbound.examples.Solver
 import kotlin.test.*
 import branchandbound.examples.branch
 
@@ -31,10 +30,8 @@ class BranchAndBoundSolverTest {
                 val idGenerator = generateSequence(0L) { it + 1 }.iterator()
                 val solvers = List(numSolvers) {
                     ContinuousKnapsackSolver(instance.profits, instance.weights, instance.capacity)
-                    // Solver(instance.profits, instance.weights, instance.capacity)
                 }
                 val rootNode = Node(id = idGenerator.next())
-
                 val solution = BranchAndBoundSolver(solvers) {
                     branch((it as Node), idGenerator)
                 }.solve(rootNode)
