@@ -1,5 +1,9 @@
-package branchAndBound
+package branchandbound.algorithm
 
+import branchandbound.api.INode
+import branchandbound.api.ISolver
+import branchandbound.api.SelectionStrategy
+import branchandbound.api.Solution
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import mu.KotlinLogging

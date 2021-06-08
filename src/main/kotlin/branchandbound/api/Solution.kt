@@ -1,4 +1,4 @@
-package branchAndBound
+package branchandbound.api
 
 /**
  * Data class to hold the solution of a branch-and-bound algorithm

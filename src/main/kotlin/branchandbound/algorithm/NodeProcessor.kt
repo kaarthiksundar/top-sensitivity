@@ -1,5 +1,8 @@
-package branchAndBound
+package branchandbound.algorithm
 
+import branchandbound.BranchAndBoundException
+import branchandbound.api.INode
+import branchandbound.api.Solution
 import kotlinx.coroutines.channels.SendChannel
 import mu.KotlinLogging
 import top.Util

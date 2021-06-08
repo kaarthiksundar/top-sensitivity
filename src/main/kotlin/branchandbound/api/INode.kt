@@ -1,4 +1,4 @@
-package branchAndBound
+package branchandbound.api
 
 /**
  * An interface for a node in a branch-and-bound tree
@@ -19,6 +19,5 @@ interface INode {
     val lpFeasible: Boolean
     val lpIntegral: Boolean
     val lpObjective: Double
-
     val mipObjective: Double?
 }

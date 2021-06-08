@@ -1,4 +1,4 @@
-package branchAndBound
+package branchandbound.api
 
 /**
  * Indicator for how an unsolved node will be selected for solving and post-processing.
