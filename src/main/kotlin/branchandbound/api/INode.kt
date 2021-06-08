@@ -19,6 +19,5 @@ interface INode {
     val lpFeasible: Boolean
     val lpIntegral: Boolean
     val lpObjective: Double
-
     val mipObjective: Double?
 }
