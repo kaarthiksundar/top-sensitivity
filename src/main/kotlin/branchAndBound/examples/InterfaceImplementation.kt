@@ -52,7 +52,7 @@ class Solver(
         val knapsack = ContinuousKnapsack(
             profit, weight, capacity, unsolvedNode.restrictions)
 
-        val eps = 1e-5
+        val eps = 1e-6
         return if (knapsack.isFeasible()) {
             val solutionMap = mutableMapOf<Int, Double>()
             var integral = true
