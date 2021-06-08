@@ -19,7 +19,7 @@ object BranchAndBoundApi {
     fun runBranchAndBound(
         solvers: List<ISolver>,
         selectionStrategy: SelectionStrategy,
-        branch: (INode) -> List<INode>,
-        rootNode: INode
+        rootNode: INode,
+        branch: (INode) -> List<INode>
     ): Solution? = BranchAndBoundSolver(solvers, selectionStrategy, branch).solve(rootNode)
 }

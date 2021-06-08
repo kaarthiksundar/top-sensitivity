@@ -1,7 +1,11 @@
 package branchandbound.examples
 
-import branchandbound.algorithm.BranchAndBoundSolver
-import kotlin.test.*
+import branchandbound.api.BranchAndBoundApi
+import branchandbound.api.SelectionStrategy
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
 class KnapsackBranchAndBoundTest {
     private val instances = listOf(
@@ -29,9 +33,11 @@ class KnapsackBranchAndBoundTest {
                     ContinuousKnapsackSolver(instance.profits, instance.weights, instance.capacity)
                 }
                 val rootNode = Node(id = idGenerator.next())
-                val solution = BranchAndBoundSolver(solvers) {
+                val solution = BranchAndBoundApi.runBranchAndBound(
+                    solvers, SelectionStrategy.BEST_BOUND, rootNode
+                ) {
                     branch((it as Node), idGenerator)
-                }.solve(rootNode)
+                }
                 assertNotNull(solution)
                 assertTrue(solution.numCreatedNodes > 1)
                 assertTrue(solution.numFeasibleNodes <= solution.numCreatedNodes)
