@@ -1,12 +1,9 @@
-package branchandbound
+package branchandbound.examples
 
 import branchandbound.algorithm.BranchAndBoundSolver
-import branchandbound.examples.ContinuousKnapsackSolver
-import branchandbound.examples.Node
 import kotlin.test.*
-import branchandbound.examples.branch
 
-class BranchAndBoundSolverTest {
+class KnapsackBranchAndBoundTest {
     private val instances = listOf(
         KnapsackInstance(
             profits = listOf(24.0, 2.0, 20.0, 4.0),
