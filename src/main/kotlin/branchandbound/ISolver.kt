@@ -1,4 +1,4 @@
-package branchAndBound
+package branchandbound
 
 /**
  * Interface for a branch-and-bound solver

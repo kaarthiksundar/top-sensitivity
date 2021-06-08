@@ -1,7 +1,7 @@
-package branchAndBound.examples
+package branchandbound.examples
 
-import branchAndBound.INode
-import branchAndBound.ISolver
+import branchandbound.INode
+import branchandbound.ISolver
 
 /**
  * Implements the node interface with additional fields

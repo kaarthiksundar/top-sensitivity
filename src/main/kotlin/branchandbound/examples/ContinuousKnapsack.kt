@@ -1,4 +1,4 @@
-package branchAndBound.examples
+package branchandbound.examples
 
 import kotlin.math.min
 

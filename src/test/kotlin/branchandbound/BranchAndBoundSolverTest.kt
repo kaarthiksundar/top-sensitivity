@@ -1,9 +1,9 @@
-package branchAndBound
+package branchandbound
 
 import kotlin.test.*
-import branchAndBound.examples.Node
-import branchAndBound.examples.Solver
-import branchAndBound.examples.branch
+import branchandbound.examples.Node
+import branchandbound.examples.Solver
+import branchandbound.examples.branch
 
 class BranchAndBoundSolverTest {
 

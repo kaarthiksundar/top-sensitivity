@@ -1,4 +1,4 @@
-package branchAndBound
+package branchandbound
 
 /**
  * Best Bound node selection strategy
