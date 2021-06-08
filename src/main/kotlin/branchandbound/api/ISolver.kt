@@ -1,4 +1,6 @@
-package branchandbound
+package branchandbound.api
+
+import branchandbound.api.INode
 
 /**
  * Interface for a branch-and-bound solver

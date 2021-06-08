@@ -1,4 +1,4 @@
-package branchandbound
+package branchandbound.api
 
 /**
  * An interface for a node in a branch-and-bound tree

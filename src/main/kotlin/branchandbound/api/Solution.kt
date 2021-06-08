@@ -1,4 +1,6 @@
-package branchandbound
+package branchandbound.api
+
+import branchandbound.api.INode
 
 /**
  * Data class to hold the solution of a branch-and-bound algorithm

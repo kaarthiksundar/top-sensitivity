@@ -1,4 +1,6 @@
-package branchandbound
+package branchandbound.algorithm
+
+import branchandbound.api.INode
 
 /**
  * Best Bound node selection strategy
