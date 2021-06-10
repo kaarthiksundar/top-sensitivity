@@ -20,7 +20,7 @@ data class Parameters(
     val timeLimitInSeconds: Int,
     val algorithm: Int,
     val eps: Double = 1e-5,
-    val maxColumnsAdded: Int = 100,
+    val maxColumnsAdded: Int = 500,
     val numInitialRoutes: Int = 10,
     val numBits: Int = 64
 )
