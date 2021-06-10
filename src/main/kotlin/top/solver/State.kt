@@ -21,7 +21,13 @@ class State private constructor (
     val length: Double,
     val parent: State?,
     val visitedVertices: MutableList<Int>
-) {
+) : Comparable<State>{
+
+    /**
+     * Reduced cost per unit length of partial path used for comparing states for sorting in a priority queue.
+     */
+    private val bangForBuck = if (length > 0) cost / length else 0.0
+
     /**
      * Create a new State object corresponding to extending the current State's path
      *
@@ -77,6 +83,17 @@ class State private constructor (
          */
         fun buildTerminalState(isForward: Boolean, vertex: Int) : State {
             return State(isForward, vertex, 0.0, 0.0, 0.0, null, mutableListOf(vertex))
+        }
+    }
+
+    /**
+     * Comparator based on reduced cost per unit length.
+     */
+    override fun compareTo(other: State): Int {
+        return when {
+            bangForBuck < other.bangForBuck -> -1
+            bangForBuck > other.bangForBuck -> 1
+            else -> 0
         }
     }
 }
