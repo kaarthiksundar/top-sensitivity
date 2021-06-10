@@ -40,7 +40,7 @@ class PricingProblem(
 
 ) {
 
-    private val unprocessedForwardStates = PriorityQueue<State>()
+    private val unprocessedForwardStates = mutableListOf<State>()
 
     private val elementaryRoutes = mutableListOf<Route>()
 
@@ -70,7 +70,8 @@ class PricingProblem(
 
         while (unprocessedForwardStates.isNotEmpty()) {
 
-            val currentState = unprocessedForwardStates.remove()
+            //val currentState = unprocessedForwardStates.remove()
+            val currentState = unprocessedForwardStates.removeLast()
 
             // Checking if destination has been reached and if so, if the elementary route has negative reduced cost
             if (currentState.vertex == destination) {
