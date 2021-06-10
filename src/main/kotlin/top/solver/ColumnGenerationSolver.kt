@@ -53,13 +53,6 @@ class ColumnGenerationSolver(
     var lpSolution = mutableListOf<Pair<Route, Double>>()
 
     /**
-     * Initially populating the list of routes using a specified number of feasible routes
-     */
-    init {
-        routes.addAll(initialRoutes(instance, parameters.numInitialRoutes))
-    }
-
-    /**
      * Solve master problem (linear relaxation for set cover model) using column generation.
      */
     fun solve() {
