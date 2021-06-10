@@ -98,13 +98,14 @@ class PricingProblem(
         val currentVertex = currentState.vertex
 
         // Iterating over all possible extensions to neighboring vertices
-        for (nextVertex in Graphs.successorListOf(graph, currentVertex)) {
-            val edgeLength = graph.getEdgeWeight(currentVertex, nextVertex)
+        for (e in graph.outgoingEdgesOf(currentVertex)) {
+            val edgeLength = graph.getEdgeWeight(e)
+            val newVertex = graph.getEdgeTarget(e)
 
             // Checking if an extension is feasible
-            val extension = extendIfFeasible(currentState, nextVertex, edgeLength) ?: continue
+            val extension = extendIfFeasible(currentState, newVertex, edgeLength) ?: continue
 
-            // Extension is feasible
+            // Extension is feasible. Update unprocessed forward states
             unprocessedForwardStates.add(extension)
         }
     }
