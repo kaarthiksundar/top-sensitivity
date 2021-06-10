@@ -226,11 +226,32 @@ class SetCoverModel(private var cplex: IloCplex) {
         }
     }
 
+    /**
+     * Function that returns the dual of the fleet size constraint
+     */
     fun getRouteDual(): Double = cplex.getDual(constraints[routeConstraintId])
 
+    /**
+     * Function that returns the duals for the vertex covering constraints
+     */
     fun getVertexDuals(): List<Double> = (0 until vertexCoverConstraintId.size).map {
         if (vertexCoverConstraintId[it] != null)
             cplex.getDual(constraints[vertexCoverConstraintId[it]!!]) else 0.0
 
     }
+
+    /**
+     * Function that returns the duals for the enforced vertices
+     */
+    fun getMustVisitVertexDuals() : Map<Int, Double> = mustVisitVertexConstraintId.map {
+        it.key to cplex.getDual(constraints[it.value])
+    }.toMap()
+
+    /**
+     * Function that returns the duals for the enforced edges
+     */
+    fun getMustVisitEdgeDuals() : Map<Pair<Int, Int>, Double> =
+        mustVisitEdgeConstraintId.map{
+            it.key to cplex.getDual(constraints[it.value])
+        }.toMap()
 }
