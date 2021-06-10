@@ -13,7 +13,8 @@ import top.data.Route
  * @param parent Previous state that was extended to create this state. Null for source vertex.
  * @param visitedVertices List of vertices that have been visited along the path
  */
-data class State(
+class State private constructor (
+    val isForward: Boolean,
     val vertex: Int,
     val cost: Double,
     val score: Double,
@@ -40,6 +41,7 @@ data class State(
         val newVisitedVertices = visitedVertices.toMutableList()
         newVisitedVertices.add(newVertex)
         return State(
+            isForward,
             vertex = newVertex,
             cost = cost + edgeCost,
             score = score + newVertexScore,
@@ -66,5 +68,15 @@ data class State(
         path.add(state.vertex)
         path.reverse()
         return Route(path, this.score, this.length)
+    }
+
+    companion object {
+
+        /**
+         * Factory constructor for creating the initial forward (backward) state at the source (destination)
+         */
+        fun buildTerminalState(isForward: Boolean, vertex: Int) : State {
+            return State(isForward, vertex, 0.0, 0.0, 0.0, null, mutableListOf(vertex))
+        }
     }
 }
