@@ -22,6 +22,8 @@ data class Parameters(
     val eps: Double = 1e-5,
     val maxColumnsAdded: Int = 500,
     val numInitialRoutes: Int = 10,
-    val numBits: Int = 64
+    val numBits: Int = 64,
+    val forwardOnly: Boolean = true,
+    val backwardOnly: Boolean = false
 )
 
