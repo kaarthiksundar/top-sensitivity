@@ -1,5 +1,8 @@
 package top.solver
 
+import top.data.Parameters
+import top.main.TOPException
+
 /**
  * Class representing a partial path used in solving the elementary shortest path problem with
  * resource constraints in the pricing problem.
@@ -67,6 +70,51 @@ class State private constructor (
             state = state.parent
         }
         return path
+    }
+
+    /**
+     * Function that checks if this state dominates another given state.
+     */
+    fun dominates(otherState: State, parameters: Parameters) : Boolean {
+
+        // States can only be compared if they have a partial path ending at the same vertex
+        if (vertex != otherState.vertex)
+            throw TOPException("States must have same vertex to be comparable.")
+
+        if (isForward != otherState.isForward)
+            throw TOPException("States can only be compared if they are going in the same direction.")
+
+        /**
+         * Comparing the components of the state. Using a Boolean to track whether there's at least one strict
+         * inequality.
+         */
+        var strict = false
+
+        // Comparing the cost
+        if (cost >= otherState.cost + parameters.eps)
+            return false
+
+        if (cost <= otherState.cost - parameters.eps)
+            strict = true
+
+        // Comparing the path length used
+        if (length >= otherState.length + parameters.eps)
+            return false
+
+        if (length <= otherState.length - parameters.eps)
+            strict = true
+
+        // Checking visited vertices
+
+        // All vertices visited by this state must be visited in the other state.
+        if (!visitedVertices.all {it in otherState.visitedVertices})
+            return false
+
+        if (visitedVertices.size < otherState.visitedVertices.size)
+            strict = true
+
+        return strict
+
     }
 
     companion object {
