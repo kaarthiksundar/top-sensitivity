@@ -1,7 +1,5 @@
 package top.solver
 
-import top.data.Route
-
 /**
  * Class representing a partial path used in solving the elementary shortest path problem with
  * resource constraints in the pricing problem.
@@ -58,22 +56,17 @@ class State private constructor (
     }
 
     /**
-     * Creating a route being tracked by the state.
-     *
-     * Vertices on the route are found by backtracking along [parent] states.
-     *
-     * @return [Route] object for the path used when creating the current state.
+     * Function that returns the partial path corresponding to the label. The order the vertices are visited
+     * is in most recently visited to first visited.
      */
-    fun generateRoute(): Route {
+    fun getPartialPath() : List<Int> {
         val path = mutableListOf<Int>()
         var state: State? = this
-        while (state!!.parent != null) {
+        while (state != null) {
             path.add(state.vertex)
             state = state.parent
         }
-        path.add(state.vertex)
-        path.reverse()
-        return Route(path, this.score, this.length)
+        return path
     }
 
     companion object {

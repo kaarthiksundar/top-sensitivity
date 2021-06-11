@@ -150,7 +150,7 @@ class PricingProblem(
             // Checking if destination has been reached and if so, if the elementary route has negative reduced cost
             if (currentState.vertex == destination) {
                 if (currentState.cost + vehicleCoverDual < - parameters.eps) {
-                    elementaryRoutes.add(currentState.generateRoute())
+                    elementaryRoutes.add(Route(currentState.getPartialPath().reversed(), currentState.score, currentState.length))
 
                     // Checking if maximum number of elementary routes reached
                     if (elementaryRoutes.size >= parameters.maxColumnsAdded)
