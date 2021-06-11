@@ -43,6 +43,9 @@ class PricingProblem(
     private val unprocessedForwardStates = mutableListOf<State>()
     private val unprocessedBackwardStates = mutableListOf<State>()
 
+    private val nonDominatedForwardStates = List(instance.numVertices) { mutableListOf<State>()}
+    private val nonDominatedBackwardStates = List(instance.numVertices) { mutableListOf<State>()}
+
     private val elementaryRoutes = mutableListOf<Route>()
 
     private val graph = instance.graph
@@ -89,7 +92,10 @@ class PricingProblem(
             val extension = extendIfFeasible(currentState, newVertex, edgeLength) ?: continue
 
             // Extension is feasible. Update unprocessed forward states
-            unprocessedForwardStates.add(extension)
+            if (parameters.useDomination)
+                addIfNonDominated(extension, nonDominatedForwardStates[newVertex])
+            else
+                unprocessedForwardStates.add(extension)
         }
     }
 
@@ -135,6 +141,38 @@ class PricingProblem(
     }
 
     /**
+     * Function that checks if the a newly created state is dominated before adding it to the list of unprocessed
+     * states.
+     */
+    private fun addIfNonDominated(extension: State, existingStates: MutableList<State>) {
+
+        val dominatedStates = mutableListOf<State>()
+
+        for (existingState in existingStates) {
+            if (existingState.dominates(extension, parameters))
+                return
+        }
+
+        for (existingState in existingStates) {
+            if (extension.dominates(existingState, parameters))
+                dominatedStates.add(existingState)
+        }
+
+        // Current state is not dominated by previously found non-dominated states. Add to list of non-dominated states
+        existingStates.add(extension)
+
+        // Removing existing states that were dominated by newly created state
+        existingStates.removeAll(dominatedStates)
+
+        // Updating the unprocessed states
+        if (extension.isForward)
+            unprocessedForwardStates.add(extension)
+        else
+            unprocessedBackwardStates.add(extension)
+
+    }
+
+    /**
      * Function that performs forward labeling only to solve the pricing problem.
      */
     private fun forwardLabelingOnly() {
@@ -172,7 +210,8 @@ class PricingProblem(
 
         while (unprocessedBackwardStates.isNotEmpty()) {
 
-            val currentState = unprocessedBackwardStates.removeLast()
+            //val currentState = unprocessedBackwardStates.remove()
+           val currentState = unprocessedBackwardStates.removeLast()
 
             // Checking if the source has been reached and if so, if the elementary route has negative reduced cost
             if (currentState.vertex == source) {
