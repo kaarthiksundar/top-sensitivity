@@ -41,6 +41,7 @@ class PricingProblem(
 ) {
 
     private val unprocessedForwardStates = mutableListOf<State>()
+    private val unprocessedBackwardStates = mutableListOf<State>()
 
     private val elementaryRoutes = mutableListOf<Route>()
 
@@ -66,29 +67,11 @@ class PricingProblem(
 
     fun generateColumns(): List<Route> {
 
-        unprocessedForwardStates.add(State.buildTerminalState(isForward = true, vertex = source))
+        if (parameters.forwardOnly)
+            forwardLabelingOnly()
 
-        while (unprocessedForwardStates.isNotEmpty()) {
-
-            //val currentState = unprocessedForwardStates.remove()
-            val currentState = unprocessedForwardStates.removeLast()
-
-            // Checking if destination has been reached and if so, if the elementary route has negative reduced cost
-            if (currentState.vertex == destination) {
-                if (currentState.cost + vehicleCoverDual < - parameters.eps) {
-                    elementaryRoutes.add(currentState.generateRoute())
-
-                    // Checking if maximum number of elementary routes reached
-                    if (elementaryRoutes.size >= parameters.maxColumnsAdded)
-                        return elementaryRoutes
-                }
-            }
-            else {
-                // Extending the state (if feasible)
-                extendForward(currentState)
-            }
-
-        }
+        if (parameters.backwardOnly)
+            backwardLabelingOnly()
 
         return elementaryRoutes
     }
@@ -110,6 +93,23 @@ class PricingProblem(
         }
     }
 
+    private fun extendBackward(currentState: State) {
+        // Vertex corresponding to partial path of backward state
+        val currentVertex = currentState.vertex
+
+        // Iterating over all possible extensions using incoming edges
+        for (e in graph.incomingEdgesOf(currentVertex)) {
+            val edgeLength = graph.getEdgeWeight(e)
+            val newVertex = graph.getEdgeSource(e)
+
+            // Checking if an extension is feasible
+            val extension = extendIfFeasible(currentState, newVertex, edgeLength) ?: continue
+
+            // Extension is feasible. Update unprocessed backward states
+            unprocessedBackwardStates.add(extension)
+        }
+    }
+
     private fun extendIfFeasible(currentState: State, newVertex: Int, edgeLength: Double) : State? {
 
         // Length of partial path after extension
@@ -120,7 +120,10 @@ class PricingProblem(
             return null
 
         // Extension is feasible
-        val edgeCost = vertexReducedCosts[newVertex] + edgeDuals[currentState.vertex][newVertex]
+        var edgeCost = vertexReducedCosts[newVertex]
+        edgeCost +=
+            if (currentState.isForward) {edgeDuals[currentState.vertex][newVertex]}
+            else {edgeDuals[newVertex][currentState.vertex]}
         val newVertexScore = instance.scores[newVertex]
 
         return currentState.extend(
@@ -129,15 +132,61 @@ class PricingProblem(
             edgeLength = edgeLength,
             newVertexScore = newVertexScore
         )
-
     }
 
+    /**
+     * Function that performs forward labeling only to solve the pricing problem.
+     */
+    private fun forwardLabelingOnly() {
 
+        // Initial (forward) state at the source
+        unprocessedForwardStates.add(State.buildTerminalState(isForward = true, vertex = source))
 
+        while (unprocessedForwardStates.isNotEmpty()) {
 
+            //val currentState = unprocessedForwardStates.remove()
+            val currentState = unprocessedForwardStates.removeLast()
 
+            // Checking if destination has been reached and if so, if the elementary route has negative reduced cost
+            if (currentState.vertex == destination) {
+                if (currentState.cost + vehicleCoverDual < - parameters.eps) {
+                    elementaryRoutes.add(currentState.generateRoute())
 
+                    // Checking if maximum number of elementary routes reached
+                    if (elementaryRoutes.size >= parameters.maxColumnsAdded)
+                        return
+                }
+            }
+            else
+                extendForward(currentState)
+        }
+    }
 
+    /**
+     * Function that performs backward labeling only to solve the pricing problem.
+     */
+    private fun backwardLabelingOnly() {
+
+        // Initial (backward) state at the destination
+        unprocessedBackwardStates.add(State.buildTerminalState(isForward = false, vertex = destination))
+
+        while (unprocessedBackwardStates.isNotEmpty()) {
+
+            val currentState = unprocessedBackwardStates.removeLast()
+
+            // Checking if the source has been reached and if so, if the elementary route has negative reduced cost
+            if (currentState.vertex == source) {
+                if (currentState.cost + vehicleCoverDual < - parameters.eps) {
+                    elementaryRoutes.add(Route(currentState.getPartialPath(), currentState.score, currentState.length))
+
+                    if (elementaryRoutes.size >= parameters.maxColumnsAdded)
+                        return
+                }
+            }
+            else
+                extendBackward(currentState)
+        }
+    }
 
 }
 
