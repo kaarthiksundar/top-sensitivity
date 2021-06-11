@@ -151,9 +151,6 @@ class PricingProblem(
         for (existingState in existingStates) {
             if (existingState.dominates(extension, parameters))
                 return
-        }
-
-        for (existingState in existingStates) {
             if (extension.dominates(existingState, parameters))
                 dominatedStates.add(existingState)
         }
