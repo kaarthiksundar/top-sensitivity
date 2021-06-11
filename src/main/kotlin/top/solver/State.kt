@@ -107,7 +107,7 @@ class State private constructor (
         // Checking visited vertices
 
         // All vertices visited by this state must be visited in the other state.
-        if (!visitedVertices.all {it in otherState.visitedVertices})
+        if (!otherState.visitedVertices.containsAll(visitedVertices))
             return false
 
         if (visitedVertices.size < otherState.visitedVertices.size)
