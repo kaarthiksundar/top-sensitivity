@@ -24,6 +24,7 @@ data class Parameters(
     val numInitialRoutes: Int = 10,
     val numBits: Int = 64,
     val forwardOnly: Boolean = true,
-    val backwardOnly: Boolean = false
+    val backwardOnly: Boolean = false,
+    val useDomination: Boolean = true
 )
 
