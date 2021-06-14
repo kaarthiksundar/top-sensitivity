@@ -74,6 +74,20 @@ class State private constructor (
     }
 
     /**
+     * Function that checks if this state and another given state share visited vertices. True if yes, false otherwise.
+     */
+    fun hasCommonVisits(otherState: State) : Boolean {
+
+        for (i in visitedVertices.indices) {
+            if (visitedVertices[i] and otherState.visitedVertices[i] != 0)
+                return true
+        }
+
+        return false
+
+    }
+
+    /**
      * Function that checks if this state dominates another given state.
      */
     fun dominates(otherState: State, parameters: Parameters) : Boolean {
