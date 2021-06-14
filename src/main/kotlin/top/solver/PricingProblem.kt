@@ -1,12 +1,8 @@
 package top.solver
 
-import org.jgrapht.Graphs
 import top.data.Instance
 import top.data.Parameters
 import top.data.Route
-import top.main.SetGraph
-import top.main.getEdgeWeight
-import java.util.*
 
 /**
  * Class responsible for handling the pricing problem in the column generation scheme.
@@ -112,7 +108,10 @@ class PricingProblem(
             val extension = extendIfFeasible(currentState, newVertex, edgeLength) ?: continue
 
             // Extension is feasible. Update unprocessed backward states
-            unprocessedBackwardStates.add(extension)
+            if (parameters.useDomination)
+                addIfNonDominated(extension, nonDominatedBackwardStates[newVertex])
+            else
+                unprocessedBackwardStates.add(extension)
         }
     }
 
@@ -146,20 +145,18 @@ class PricingProblem(
      */
     private fun addIfNonDominated(extension: State, existingStates: MutableList<State>) {
 
-        val dominatedStates = mutableListOf<State>()
-
-        for (existingState in existingStates) {
-            if (existingState.dominates(extension, parameters))
+        // Iterating over the existing states in reversed order. Iterating backwards leads to large speed improvements
+        // when removing states in the list of existing non-dominated states
+        for (i in existingStates.indices.reversed()) {
+            if (existingStates[i].dominates(extension, parameters))
                 return
-            if (extension.dominates(existingState, parameters))
-                dominatedStates.add(existingState)
+            if(extension.dominates(existingStates[i], parameters))
+                existingStates.removeAt(i)
         }
 
         // Current state is not dominated by previously found non-dominated states. Add to list of non-dominated states
         existingStates.add(extension)
 
-        // Removing existing states that were dominated by newly created state
-        existingStates.removeAll(dominatedStates)
 
         // Updating the unprocessed states
         if (extension.isForward)
@@ -185,7 +182,7 @@ class PricingProblem(
             // Checking if destination has been reached and if so, if the elementary route has negative reduced cost
             if (currentState.vertex == destination) {
                 if (currentState.cost + vehicleCoverDual < - parameters.eps) {
-                    elementaryRoutes.add(Route(currentState.getPartialPath().reversed(), currentState.score, currentState.length))
+                    elementaryRoutes.add(Route(currentState.getPartialPath().asReversed(), currentState.score, currentState.length))
 
                     // Checking if maximum number of elementary routes reached
                     if (elementaryRoutes.size >= parameters.maxColumnsAdded)
