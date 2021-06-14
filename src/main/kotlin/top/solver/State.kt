@@ -46,7 +46,8 @@ class State private constructor (
         newVertexScore: Double
     ): State {
         val newVisitedVertices = visitedVertices.toMutableList()
-        newVisitedVertices.add(newVertex)
+        //newVisitedVertices.add(newVertex)
+        newVisitedVertices[newVertex] += 1
         return State(
             isForward,
             vertex = newVertex,
@@ -105,13 +106,13 @@ class State private constructor (
             strict = true
 
         // Checking visited vertices
+        for (i in visitedVertices.indices) {
+            if (visitedVertices[i] > otherState.visitedVertices[i])
+                return false
 
-        // All vertices visited by this state must be visited in the other state.
-        if (!otherState.visitedVertices.containsAll(visitedVertices))
-            return false
-
-        if (visitedVertices.size < otherState.visitedVertices.size)
-            strict = true
+            if (visitedVertices[i] < otherState.visitedVertices[i])
+                strict = true
+        }
 
         return strict
 
@@ -122,8 +123,11 @@ class State private constructor (
         /**
          * Factory constructor for creating the initial forward (backward) state at the source (destination)
          */
-        fun buildTerminalState(isForward: Boolean, vertex: Int) : State {
-            return State(isForward, vertex, 0.0, 0.0, 0.0, null, mutableListOf(vertex))
+        fun buildTerminalState(isForward: Boolean, vertex: Int, numVertices: Int) : State {
+
+            val visitedVertices = MutableList(size = numVertices){when (it) {vertex -> 1 else -> 0} }
+
+            return State(isForward, vertex, 0.0, 0.0, 0.0, null, visitedVertices)
         }
     }
 

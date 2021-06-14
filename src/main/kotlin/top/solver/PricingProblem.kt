@@ -121,7 +121,7 @@ class PricingProblem(
         val newPathLength = currentState.length + edgeLength
 
         // Checking if new path is elementary or if the path length exceeds the budget
-        if (newVertex in currentState.visitedVertices || newPathLength > budget)
+        if (currentState.visitedVertices[newVertex] == 1 || newPathLength > budget)
             return null
 
         // Extension is feasible
@@ -157,7 +157,6 @@ class PricingProblem(
         // Current state is not dominated by previously found non-dominated states. Add to list of non-dominated states
         existingStates.add(extension)
 
-
         // Updating the unprocessed states
         if (extension.isForward)
             unprocessedForwardStates.add(extension)
@@ -172,7 +171,7 @@ class PricingProblem(
     private fun forwardLabelingOnly() {
 
         // Initial (forward) state at the source
-        unprocessedForwardStates.add(State.buildTerminalState(isForward = true, vertex = source))
+        unprocessedForwardStates.add(State.buildTerminalState(isForward = true, vertex = source, numVertices = instance.numVertices))
 
         while (unprocessedForwardStates.isNotEmpty()) {
 
@@ -200,7 +199,7 @@ class PricingProblem(
     private fun backwardLabelingOnly() {
 
         // Initial (backward) state at the destination
-        unprocessedBackwardStates.add(State.buildTerminalState(isForward = false, vertex = destination))
+        unprocessedBackwardStates.add(State.buildTerminalState(isForward = false, vertex = destination, numVertices = instance.numVertices))
 
         while (unprocessedBackwardStates.isNotEmpty()) {
 
