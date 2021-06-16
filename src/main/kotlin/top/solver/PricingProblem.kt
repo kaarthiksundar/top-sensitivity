@@ -238,6 +238,9 @@ class PricingProblem(
      */
     private fun addIfNonDominated(extension: State, existingStates: MutableList<State>) {
 
+        // Marking all unreachable nodes before checking for dominance
+        updateUnreachableVertices(extension)
+
         // Iterating over the existing states in reversed order. Iterating backwards leads to large speed improvements
         // when removing states in the list of existing non-dominated states
         for (i in existingStates.indices.reversed()) {
@@ -256,6 +259,26 @@ class PricingProblem(
             unprocessedForwardStates.add(extension)
         else
             unprocessedBackwardStates.add(extension)
+
+    }
+
+    /**
+     * Function that identifies all vertices that are unreachable for a given state in the sense that the time the
+     * vehicle reaches such a vertex will exceed the given budget.
+     */
+    private fun updateUnreachableVertices(state: State) {
+
+        val currentVertex = state.vertex
+
+        for (e in graph.outgoingEdgesOf(currentVertex)) {
+
+            val targetVertex = graph.getEdgeTarget(e)
+            val edgeLength = graph.getEdgeWeight(e)
+
+            if (state.length + edgeLength > budget)
+                state.markUnreachable(targetVertex)
+
+        }
 
     }
 

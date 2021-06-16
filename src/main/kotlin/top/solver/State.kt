@@ -132,6 +132,10 @@ class State private constructor (
 
     }
 
+    fun markUnreachable(vertex: Int) {
+        visitedVertices[vertex] = 1
+    }
+
     companion object {
 
         /**
