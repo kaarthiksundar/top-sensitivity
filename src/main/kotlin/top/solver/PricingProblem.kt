@@ -4,6 +4,8 @@ import top.data.Instance
 import top.data.Parameters
 import top.data.Route
 import top.main.getEdgeWeight
+import java.util.*
+import kotlin.math.absoluteValue
 
 /**
  * Class responsible for handling the pricing problem in the column generation scheme.
@@ -37,8 +39,8 @@ class PricingProblem(
 
 ) {
 
-    private val unprocessedForwardStates = mutableListOf<State>()
-    private val unprocessedBackwardStates = mutableListOf<State>()
+    private val unprocessedForwardStates = PriorityQueue<State>()
+    private val unprocessedBackwardStates = PriorityQueue<State>()
 
     private val nonDominatedForwardStates = List(instance.numVertices) { mutableListOf<State>()}
     private val nonDominatedBackwardStates = List(instance.numVertices) { mutableListOf<State>()}
@@ -122,7 +124,7 @@ class PricingProblem(
     private fun join(forwardState: State, backwardState: State) {
 
         // Checking if the join is feasible
-        if (!isFeasibleJoin(forwardState, backwardState))
+        if (!isFeasibleJoin(forwardState, backwardState) || !halfway(forwardState, backwardState))
             return
 
         // Finding the reduced cost of the joined path
@@ -287,6 +289,34 @@ class PricingProblem(
 
     }
 
+    private fun halfway(forwardState: State, backwardState: State) : Boolean {
+
+        val currDiff = (forwardState.length - backwardState.length).absoluteValue
+        if (currDiff <= eps)
+            return true
+
+        val edgeLength = graph.getEdgeWeight(forwardState.vertex, backwardState.vertex)
+        var otherDiff = 0.0
+
+        if (forwardState.length <= backwardState.length - eps) {
+            if (backwardState.parent != null) {
+                otherDiff = (forwardState.length + edgeLength - backwardState.parent.length).absoluteValue
+            }
+        }
+        else if (forwardState.parent != null) {
+            otherDiff = (forwardState.parent.length - (edgeLength + backwardState.length)).absoluteValue
+        }
+
+        if (currDiff <= otherDiff - eps)
+            return true
+
+        if (currDiff >= otherDiff + eps)
+            return false
+
+        return forwardState.length >= backwardState.length + eps
+
+    }
+
     /**
      * Function that performs forward labeling only to solve the pricing problem.
      */
@@ -297,8 +327,8 @@ class PricingProblem(
 
         while (unprocessedForwardStates.isNotEmpty()) {
 
-            //val currentState = unprocessedForwardStates.remove()
-            val currentState = unprocessedForwardStates.removeLast()
+            val currentState = unprocessedForwardStates.remove()
+            //val currentState = unprocessedForwardStates.removeLast()
 
             // Checking if destination has been reached and if so, if the elementary route has negative reduced cost
             if (currentState.vertex == destination) {
@@ -325,8 +355,8 @@ class PricingProblem(
 
         while (unprocessedBackwardStates.isNotEmpty()) {
 
-           //val currentState = unprocessedBackwardStates.remove()
-           val currentState = unprocessedBackwardStates.removeLast()
+           val currentState = unprocessedBackwardStates.remove()
+           //val currentState = unprocessedBackwardStates.removeLast()
 
             // Checking if the source has been reached and if so, if the elementary route has negative reduced cost
             if (currentState.vertex == source) {
@@ -358,14 +388,14 @@ class PricingProblem(
 
             if (processForward) {
                 if (unprocessedForwardStates.isNotEmpty()) {
-                    state = unprocessedForwardStates.removeLast()
-                    //state = unprocessedForwardStates.remove()
+                    //state = unprocessedForwardStates.removeLast()
+                    state = unprocessedForwardStates.remove()
                 }
             }
             else {
                 if(unprocessedBackwardStates.isNotEmpty()) {
-                    state = unprocessedBackwardStates.removeLast()
-                    //state = unprocessedBackwardStates.remove()
+                    //state = unprocessedBackwardStates.removeLast()
+                    state = unprocessedBackwardStates.remove()
                 }
             }
 
