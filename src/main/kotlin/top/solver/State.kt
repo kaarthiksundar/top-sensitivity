@@ -12,7 +12,7 @@ import top.main.TOPException
  * @param score Accumulated prize collected
  * @param length Length of the path
  * @param parent Previous state that was extended to create this state. Null for source vertex.
- * @param visitedVertices List of vertices that have been visited along the path
+ * @param visitedVertices Array of Longs representing if a vertex has been visited or not.
  */
 class State private constructor (
     val isForward: Boolean,
@@ -21,7 +21,7 @@ class State private constructor (
     val score: Double,
     val length: Double,
     val parent: State?,
-    val visitedVertices: MutableList<Int>
+    val visitedVertices: LongArray
 ) : Comparable<State>{
 
     /**
@@ -45,9 +45,8 @@ class State private constructor (
         edgeLength: Double,
         newVertexScore: Double
     ): State {
-        val newVisitedVertices = visitedVertices.toMutableList()
-        //newVisitedVertices.add(newVertex)
-        newVisitedVertices[newVertex] += 1
+        val newVisitedVertices = visitedVertices.copyOf()
+
         return State(
             isForward,
             vertex = newVertex,
@@ -79,8 +78,11 @@ class State private constructor (
     fun hasCommonVisits(otherState: State) : Boolean {
 
         for (i in visitedVertices.indices) {
-            if (visitedVertices[i] and otherState.visitedVertices[i] != 0)
+
+            // Checking the AND operation yields 0L (i.e., checking if a vertex is shared)
+            if (visitedVertices[i] and otherState.visitedVertices[i] != 0L) {
                 return true
+            }
         }
 
         return false
@@ -132,8 +134,17 @@ class State private constructor (
 
     }
 
-    fun markUnreachable(vertex: Int) {
-        visitedVertices[vertex] = 1
+    fun markUnreachable(vertex: Int, parameters: Parameters) {
+
+        // Finding which set of n bits to update
+        val quotient : Int = vertex / parameters.numBits
+
+        // Finding which bit in the set of n bits to update
+        val remainder : Int = vertex / parameters.numBits
+
+        // Updating
+        visitedVertices[quotient] = visitedVertices[quotient] or (1L shl remainder)
+
     }
 
     companion object {
@@ -141,11 +152,19 @@ class State private constructor (
         /**
          * Factory constructor for creating the initial forward (backward) state at the source (destination)
          */
-        fun buildTerminalState(isForward: Boolean, vertex: Int, numVertices: Int) : State {
+        fun buildTerminalState(isForward: Boolean, vertex: Int, numVertices: Int, parameters: Parameters) : State {
 
-            val visitedVertices = MutableList(size = numVertices){when (it) {vertex -> 1 else -> 0} }
+            val numberOfLongs : Int = (numVertices / parameters.numBits) + 1
 
-            return State(isForward, vertex, 0.0, 0.0, 0.0, null, visitedVertices)
+            val arrayOfLongs = LongArray(numberOfLongs) {0L}
+
+            // Updating the terminal vertex's bit to be a 1
+            val quotient : Int = vertex / parameters.numBits
+            val remainder : Int = vertex / parameters.numBits
+
+            arrayOfLongs[quotient] = 1L shl remainder
+
+            return State(isForward, vertex, 0.0, 0.0, 0.0, null, LongArray(numberOfLongs) {0L})
         }
     }
 
