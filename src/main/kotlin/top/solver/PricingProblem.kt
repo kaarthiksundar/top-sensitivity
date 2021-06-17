@@ -47,6 +47,10 @@ class PricingProblem(
 
     private val graph = instance.graph
 
+    private val eps = parameters.eps
+
+    private val maxColumnsAdded = parameters.maxColumnsAdded
+
     /**
      * Solve the pricing problem (elementary shortest path problem with resource constraints)
      *
@@ -91,7 +95,7 @@ class PricingProblem(
                     join(currentState, backwardState)
 
                     // Checking if max number of elementary routes reached
-                    if (elementaryRoutes.size >= parameters.maxColumnsAdded)
+                    if (elementaryRoutes.size >= maxColumnsAdded)
                         return
                 }
 
@@ -108,7 +112,7 @@ class PricingProblem(
                     join(forwardState, currentState)
 
                     // Checking if max number of elementary routes reached
-                    if (elementaryRoutes.size >= parameters.maxColumnsAdded)
+                    if (elementaryRoutes.size >= maxColumnsAdded)
                         return
                 }
             }
@@ -125,7 +129,7 @@ class PricingProblem(
         val reducedCost = vehicleCoverDual + forwardState.cost + backwardState.cost + edgeDuals[forwardState.vertex][backwardState.vertex]
 
         // Checking if the reduced cost is negative
-        if (reducedCost >= - parameters.eps)
+        if (reducedCost >= - eps)
             return
 
         // Elementary path with negative reduced cost found. Storing it
@@ -147,7 +151,7 @@ class PricingProblem(
 
     private fun processState(state: State) {
 
-        if (state.length >= budget / 2 + parameters.eps)
+        if (state.length >= budget / 2 + eps)
             return
 
         if (state.isForward) extendForward(state)
@@ -214,7 +218,7 @@ class PricingProblem(
         val newPathLength = currentState.length + edgeLength
 
         // Checking if new path is elementary or if the path length exceeds the budget
-        if (currentState.visitedVertices[newVertex] == 1 || newPathLength > budget)
+        if (currentState.inPartialPath(newVertex, parameters) || newPathLength > budget)
             return null
 
         // Extension is feasible
@@ -228,7 +232,8 @@ class PricingProblem(
             newVertex = newVertex,
             edgeCost = edgeCost,
             edgeLength = edgeLength,
-            newVertexScore = newVertexScore
+            newVertexScore = newVertexScore,
+            parameters
         )
     }
 
@@ -276,7 +281,7 @@ class PricingProblem(
             val edgeLength = graph.getEdgeWeight(e)
 
             if (state.length + edgeLength > budget)
-                state.markUnreachable(targetVertex)
+                state.markVertex(targetVertex, state.visitedVertices, parameters)
 
         }
 
@@ -288,7 +293,7 @@ class PricingProblem(
     private fun forwardLabelingOnly() {
 
         // Initial (forward) state at the source
-        unprocessedForwardStates.add(State.buildTerminalState(isForward = true, vertex = source, numVertices = instance.numVertices))
+        unprocessedForwardStates.add(State.buildTerminalState(isForward = true, vertex = source, numVertices = instance.numVertices, parameters))
 
         while (unprocessedForwardStates.isNotEmpty()) {
 
@@ -297,11 +302,11 @@ class PricingProblem(
 
             // Checking if destination has been reached and if so, if the elementary route has negative reduced cost
             if (currentState.vertex == destination) {
-                if (currentState.cost + vehicleCoverDual < - parameters.eps) {
+                if (currentState.cost + vehicleCoverDual < - eps) {
                     elementaryRoutes.add(Route(currentState.getPartialPath().asReversed(), currentState.score, currentState.length))
 
                     // Checking if maximum number of elementary routes reached
-                    if (elementaryRoutes.size >= parameters.maxColumnsAdded)
+                    if (elementaryRoutes.size >= maxColumnsAdded)
                         return
                 }
             }
@@ -316,7 +321,7 @@ class PricingProblem(
     private fun backwardLabelingOnly() {
 
         // Initial (backward) state at the destination
-        unprocessedBackwardStates.add(State.buildTerminalState(isForward = false, vertex = destination, numVertices = instance.numVertices))
+        unprocessedBackwardStates.add(State.buildTerminalState(isForward = false, vertex = destination, numVertices = instance.numVertices, parameters))
 
         while (unprocessedBackwardStates.isNotEmpty()) {
 
@@ -325,10 +330,10 @@ class PricingProblem(
 
             // Checking if the source has been reached and if so, if the elementary route has negative reduced cost
             if (currentState.vertex == source) {
-                if (currentState.cost + vehicleCoverDual < - parameters.eps) {
+                if (currentState.cost + vehicleCoverDual < - eps) {
                     elementaryRoutes.add(Route(currentState.getPartialPath(), currentState.score, currentState.length))
 
-                    if (elementaryRoutes.size >= parameters.maxColumnsAdded)
+                    if (elementaryRoutes.size >= maxColumnsAdded)
                         return
                 }
             }
@@ -340,8 +345,8 @@ class PricingProblem(
     private fun bidirectional() : MutableList<Route> {
 
         // Initializing the forward and backward states at the terminal vertices
-        unprocessedForwardStates.add(State.buildTerminalState(isForward = true, vertex = source, numVertices = instance.numVertices))
-        unprocessedBackwardStates.add(State.buildTerminalState(isForward = false, vertex = destination, numVertices = instance.numVertices))
+        unprocessedForwardStates.add(State.buildTerminalState(isForward = true, vertex = source, numVertices = instance.numVertices, parameters))
+        unprocessedBackwardStates.add(State.buildTerminalState(isForward = false, vertex = destination, numVertices = instance.numVertices, parameters))
 
         // Flag for which side to be extended
         var processForward = true
@@ -374,7 +379,7 @@ class PricingProblem(
             // Finding all possible joins
             performAllJoins(state)
 
-            if (elementaryRoutes.size >= parameters.maxColumnsAdded)
+            if (elementaryRoutes.size >= maxColumnsAdded)
                 return elementaryRoutes
 
             // Max number of elementary routes not yet found, so extend the state

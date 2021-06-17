@@ -43,9 +43,11 @@ class State private constructor (
         newVertex: Int,
         edgeCost: Double,
         edgeLength: Double,
-        newVertexScore: Double
+        newVertexScore: Double,
+        parameters: Parameters
     ): State {
         val newVisitedVertices = visitedVertices.copyOf()
+        markVertex(newVertex, newVisitedVertices, parameters)
 
         return State(
             isForward,
@@ -134,16 +136,25 @@ class State private constructor (
 
     }
 
-    fun markUnreachable(vertex: Int, parameters: Parameters) {
+    fun markVertex(vertex: Int, visitedVertices: LongArray, parameters: Parameters) {
 
         // Finding which set of n bits to update
         val quotient : Int = vertex / parameters.numBits
 
         // Finding which bit in the set of n bits to update
-        val remainder : Int = vertex / parameters.numBits
+        val remainder : Int = vertex % parameters.numBits
 
         // Updating
         visitedVertices[quotient] = visitedVertices[quotient] or (1L shl remainder)
+
+    }
+
+    fun inPartialPath(vertex: Int, parameters: Parameters) : Boolean {
+
+        val quotient : Int = vertex / parameters.numBits
+        val remainder : Int = vertex % parameters.numBits
+
+        return visitedVertices[quotient] and (1L shl remainder) != 0L
 
     }
 
@@ -160,7 +171,7 @@ class State private constructor (
 
             // Updating the terminal vertex's bit to be a 1
             val quotient : Int = vertex / parameters.numBits
-            val remainder : Int = vertex / parameters.numBits
+            val remainder : Int = vertex % parameters.numBits
 
             arrayOfLongs[quotient] = 1L shl remainder
 
