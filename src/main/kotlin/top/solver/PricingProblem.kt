@@ -3,9 +3,7 @@ package top.solver
 import top.data.Instance
 import top.data.Parameters
 import top.data.Route
-import top.main.getEdgeWeight
 import java.util.*
-import kotlin.math.absoluteValue
 
 /**
  * Class responsible for handling the pricing problem in the column generation scheme.
@@ -40,10 +38,7 @@ class PricingProblem(
 ) {
 
     private val unprocessedForwardStates = PriorityQueue<State>()
-    private val unprocessedBackwardStates = PriorityQueue<State>()
-
     private val nonDominatedForwardStates = List(instance.numVertices) { mutableListOf<State>()}
-    private val nonDominatedBackwardStates = List(instance.numVertices) { mutableListOf<State>()}
 
     private val elementaryRoutes = mutableListOf<Route>()
 
@@ -53,6 +48,10 @@ class PricingProblem(
 
     private val maxColumnsAdded = parameters.maxColumnsAdded
 
+    private val source = instance.source
+    private val destination = instance.destination
+    private val budget = instance.budget
+
     /**
      * Solve the pricing problem (elementary shortest path problem with resource constraints)
      *
@@ -60,120 +59,19 @@ class PricingProblem(
      * source to the destination with a path length less than the budget and a negative
      * accumulated cost.
      *
-     * This will be done using a standard labeling algorithm. This procedure could be improved
-     * by including domination rules and other acceleration techniques
-     * (such as unreachable nodes).
-     *
      * @return routes to be added to the restricted master problem in the column generation scheme
      */
-
-    private val source = instance.source
-    private val destination = instance.destination
-    private val budget = instance.budget
-
     fun generateColumns(): List<Route> {
 
-        when {
-            parameters.forwardOnly -> forwardLabelingOnly()
-            parameters.backwardOnly -> backwardLabelingOnly()
-            parameters.useBidirectional -> bidirectional()
-        }
+        forwardLabelingOnly()
 
         return elementaryRoutes
     }
 
-    private fun performAllJoins(currentState: State) {
-        val currentVertex = currentState.vertex
-
-        // Joining forward state with all non-dominated backward states
-        if (currentState.isForward) {
-            for (e in graph.outgoingEdgesOf(currentVertex)) {
-
-                val nextVertex = graph.getEdgeTarget(e)
-
-                for (backwardState in nonDominatedBackwardStates[nextVertex]) {
-
-                    // Attempting to join
-                    join(currentState, backwardState)
-
-                    // Checking if max number of elementary routes reached
-                    if (elementaryRoutes.size >= maxColumnsAdded)
-                        return
-                }
-
-            }
-        }
-        else { // Joining backward state with all non-dominated forward states
-            for (e in graph.incomingEdgesOf(currentVertex)) {
-
-                val previousVertex = graph.getEdgeSource(e)
-
-                for (forwardState in nonDominatedForwardStates[previousVertex]) {
-
-                    // Attempting to join
-                    join(forwardState, currentState)
-
-                    // Checking if max number of elementary routes reached
-                    if (elementaryRoutes.size >= maxColumnsAdded)
-                        return
-                }
-            }
-        }
-    }
-
-    private fun join(forwardState: State, backwardState: State) {
-
-        // Checking if the join is feasible
-        if (!isFeasibleJoin(forwardState, backwardState) || !halfway(forwardState, backwardState))
-            return
-
-        // Finding the reduced cost of the joined path
-        val reducedCost = vehicleCoverDual + forwardState.cost + backwardState.cost + edgeDuals[forwardState.vertex][backwardState.vertex]
-
-        // Checking if the reduced cost is negative
-        if (reducedCost >= - eps)
-            return
-
-        // Elementary path with negative reduced cost found. Storing it
-        val joinedPath = mutableListOf<Int>()
-        joinedPath.addAll(forwardState.getPartialPath().asReversed())
-        joinedPath.addAll(backwardState.getPartialPath())
-
-        val edgeLength = graph.getEdgeWeight(forwardState.vertex, backwardState.vertex)
-
-        val newElementaryRoute = Route(
-            path = joinedPath,
-            score = forwardState.score + backwardState.score,
-            length = forwardState.length + edgeLength + backwardState.length
-        )
-
-        elementaryRoutes.add(newElementaryRoute)
-
-    }
-
-    private fun processState(state: State) {
-
-        if (state.length >= budget / 2 + eps)
-            return
-
-        if (state.isForward) extendForward(state)
-        else extendBackward(state)
-
-    }
 
     /**
-     * Function that checks if joining a forward state with a backward state yields an elementary path with a length
-     * not exceeding the given budget.
+     * Function for processing a forward state.
      */
-    private fun isFeasibleJoin(forwardState: State, backwardState: State) : Boolean {
-
-        val edgeLength = graph.getEdgeWeight(forwardState.vertex, backwardState.vertex)
-        val joinedPathLength = forwardState.length + edgeLength + backwardState.length
-
-        return (!forwardState.hasCommonVisits(backwardState) && joinedPathLength <= budget)
-
-    }
-
     private fun extendForward(currentState: State) {
         // Vertex corresponding to partial path of forward state
         val currentVertex = currentState.vertex
@@ -187,33 +85,17 @@ class PricingProblem(
             val extension = extendIfFeasible(currentState, newVertex, edgeLength) ?: continue
 
             // Extension is feasible. Update unprocessed forward states
-            if (parameters.useDomination || parameters.useBidirectional)
+            if (parameters.useDomination)
                 addIfNonDominated(extension, nonDominatedForwardStates[newVertex])
             else
                 unprocessedForwardStates.add(extension)
         }
     }
 
-    private fun extendBackward(currentState: State) {
-        // Vertex corresponding to partial path of backward state
-        val currentVertex = currentState.vertex
-
-        // Iterating over all possible extensions using incoming edges
-        for (e in graph.incomingEdgesOf(currentVertex)) {
-            val edgeLength = graph.getEdgeWeight(e)
-            val newVertex = graph.getEdgeSource(e)
-
-            // Checking if an extension is feasible
-            val extension = extendIfFeasible(currentState, newVertex, edgeLength) ?: continue
-
-            // Extension is feasible. Update unprocessed backward states
-            if (parameters.useDomination || parameters.useBidirectional)
-                addIfNonDominated(extension, nonDominatedBackwardStates[newVertex])
-            else
-                unprocessedBackwardStates.add(extension)
-        }
-    }
-
+    /**
+     * Function that extends the given State object if feasible in the sense the resulting path is elementary
+     * and its length does not exceed the budget.
+     */
     private fun extendIfFeasible(currentState: State, newVertex: Int, edgeLength: Double) : State? {
 
         // Length of partial path after extension
@@ -262,10 +144,7 @@ class PricingProblem(
         existingStates.add(extension)
 
         // Updating the unprocessed states
-        if (extension.isForward)
-            unprocessedForwardStates.add(extension)
-        else
-            unprocessedBackwardStates.add(extension)
+        unprocessedForwardStates.add(extension)
 
     }
 
@@ -284,37 +163,7 @@ class PricingProblem(
 
             if (state.length + edgeLength > budget)
                 state.markVertex(targetVertex, state.visitedVertices, parameters)
-
         }
-
-    }
-
-    private fun halfway(forwardState: State, backwardState: State) : Boolean {
-
-        val currDiff = (forwardState.length - backwardState.length).absoluteValue
-        if (currDiff <= eps)
-            return true
-
-        val edgeLength = graph.getEdgeWeight(forwardState.vertex, backwardState.vertex)
-        var otherDiff = 0.0
-
-        if (forwardState.length <= backwardState.length - eps) {
-            if (backwardState.parent != null) {
-                otherDiff = (forwardState.length + edgeLength - backwardState.parent.length).absoluteValue
-            }
-        }
-        else if (forwardState.parent != null) {
-            otherDiff = (forwardState.parent.length - (edgeLength + backwardState.length)).absoluteValue
-        }
-
-        if (currDiff <= otherDiff - eps)
-            return true
-
-        if (currDiff >= otherDiff + eps)
-            return false
-
-        return forwardState.length >= backwardState.length + eps
-
     }
 
     /**
@@ -328,7 +177,6 @@ class PricingProblem(
         while (unprocessedForwardStates.isNotEmpty()) {
 
             val currentState = unprocessedForwardStates.remove()
-            //val currentState = unprocessedForwardStates.removeLast()
 
             // Checking if destination has been reached and if so, if the elementary route has negative reduced cost
             if (currentState.vertex == destination) {
@@ -344,82 +192,5 @@ class PricingProblem(
                 extendForward(currentState)
         }
     }
-
-    /**
-     * Function that performs backward labeling only to solve the pricing problem.
-     */
-    private fun backwardLabelingOnly() {
-
-        // Initial (backward) state at the destination
-        unprocessedBackwardStates.add(State.buildTerminalState(isForward = false, vertex = destination, numVertices = instance.numVertices, parameters))
-
-        while (unprocessedBackwardStates.isNotEmpty()) {
-
-           val currentState = unprocessedBackwardStates.remove()
-           //val currentState = unprocessedBackwardStates.removeLast()
-
-            // Checking if the source has been reached and if so, if the elementary route has negative reduced cost
-            if (currentState.vertex == source) {
-                if (currentState.cost + vehicleCoverDual < - eps) {
-                    elementaryRoutes.add(Route(currentState.getPartialPath(), currentState.score, currentState.length))
-
-                    if (elementaryRoutes.size >= maxColumnsAdded)
-                        return
-                }
-            }
-            else
-                extendBackward(currentState)
-        }
-    }
-
-    private fun bidirectional() : MutableList<Route> {
-
-        // Initializing the forward and backward states at the terminal vertices
-        unprocessedForwardStates.add(State.buildTerminalState(isForward = true, vertex = source, numVertices = instance.numVertices, parameters))
-        unprocessedBackwardStates.add(State.buildTerminalState(isForward = false, vertex = destination, numVertices = instance.numVertices, parameters))
-
-        // Flag for which side to be extended
-        var processForward = true
-
-        while (unprocessedForwardStates.isNotEmpty() || unprocessedBackwardStates.isNotEmpty()) {
-
-            // State to be extended
-            var state: State? = null
-
-            if (processForward) {
-                if (unprocessedForwardStates.isNotEmpty()) {
-                    //state = unprocessedForwardStates.removeLast()
-                    state = unprocessedForwardStates.remove()
-                }
-            }
-            else {
-                if(unprocessedBackwardStates.isNotEmpty()) {
-                    //state = unprocessedBackwardStates.removeLast()
-                    state = unprocessedBackwardStates.remove()
-                }
-            }
-
-            // Switching sides
-            processForward = !processForward
-
-            // Switching sides if one side has no states to extend
-            if (state == null)
-                continue
-
-            // Finding all possible joins
-            performAllJoins(state)
-
-            if (elementaryRoutes.size >= maxColumnsAdded)
-                return elementaryRoutes
-
-            // Max number of elementary routes not yet found, so extend the state
-            processState(state)
-
-        }
-
-        return elementaryRoutes
-
-    }
-
 }
 
