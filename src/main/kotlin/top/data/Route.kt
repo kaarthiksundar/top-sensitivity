@@ -11,6 +11,7 @@ data class Route(
     val path: List<Int>,
     val score: Double,
     val length: Double,
+    val reducedCost: Double
 ) {
     override fun equals(other: Any?): Boolean {
         return other != null && (other is Route) && path == other.path

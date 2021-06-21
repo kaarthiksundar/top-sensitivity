@@ -38,20 +38,26 @@ class PricingProblem(
 
 
 ) {
-
-    private val unprocessedForwardStates = PriorityQueue<State>()
-    private val unprocessedBackwardStates = PriorityQueue<State>()
-
-    private val nonDominatedForwardStates = List(instance.numVertices) { mutableListOf<State>()}
-    private val nonDominatedBackwardStates = List(instance.numVertices) { mutableListOf<State>()}
-
     private val elementaryRoutes = mutableListOf<Route>()
 
     private val graph = instance.graph
 
     private val eps = parameters.eps
 
+    private val numVertices = instance.numVertices
+
     private val maxColumnsAdded = parameters.maxColumnsAdded
+
+    private val unprocessedForwardStates = PriorityQueue<State>()
+    private val unprocessedBackwardStates = PriorityQueue<State>()
+
+    private val nonDominatedForwardStates = List(numVertices) { mutableListOf<State>()}
+    private val nonDominatedBackwardStates = List(numVertices) { mutableListOf<State>()}
+
+    private var optimalRoute: Route? = null
+
+    private val isVisitedMultipleTimes = BooleanArray(numVertices) {false}
+    private val isCritical = BooleanArray(numVertices) {false}
 
     /**
      * Solve the pricing problem (elementary shortest path problem with resource constraints)
@@ -71,9 +77,77 @@ class PricingProblem(
     private val destination = instance.destination
     private val budget = instance.budget
 
+
     fun generateColumns(): List<Route> {
 
+        // Initializing the (non-dominated) states at the source and destination
+        nonDominatedForwardStates[source].add(State.buildTerminalState(isForward = true, vertex = source, numVertices = numVertices, parameters))
+        nonDominatedBackwardStates[destination].add(State.buildTerminalState(isForward = false, vertex = destination, numVertices = numVertices, parameters))
+
+        var searchIteration = 0
+        var stopSearch = false
+
+        do {
+
+            // Using the same duals (i.e., same previous RMP solution), but the critical vertex set is modified
+
+            // Clearing the forward/backward lists
+
+            // With the current critical vertex set, find all admissible elementary routes
+
+            // Check if number of admissible elementary routes exceeds a set amount. If so, resolve RMP for new duals
+
+            // Otherwise, from the best route find which vertices visited multiple times and update critical vertex set
+
+            // If best route is elementary, stop DSSR and solve RMP for new duals
+
+
+            searchIteration++
+
+            if (searchIteration == 10)
+                stopSearch = true
+        } while(!stopSearch)
+
         return elementaryRoutes
+    }
+
+    private fun initializeIteration() {
+        // Updating the critical vertices
+        for (i in isCritical.indices) {
+            if (!isCritical[i]) {
+                // If vertex is not initially critical, check if it was visited multiple times in previous iteration
+                isCritical[i] = isVisitedMultipleTimes[i]
+            }
+        }
+
+        // Clearing all states
+        for (i in nonDominatedForwardStates.indices) {
+            nonDominatedForwardStates[i].clear()
+            nonDominatedBackwardStates[i].clear()
+        }
+
+        // Remaking initial states at source and destination
+        nonDominatedForwardStates[source].add(State.buildTerminalState(isForward = true, vertex = source, numVertices = numVertices, parameters))
+        nonDominatedBackwardStates[destination].add(State.buildTerminalState(isForward = false, vertex = destination, numVertices = numVertices, parameters))
+
+        // Update optimal route with best cached elementary route
+        if (optimalRoute != null && hasCycle(optimalRoute!!.path)) {
+            optimalRoute = elementaryRoutes.firstOrNull()
+            for (route in elementaryRoutes.drop(1)) {
+                if (route.reducedCost <= optimalRoute!!.reducedCost - eps)
+                    optimalRoute = route
+            }
+        }
+    }
+
+    private fun hasCycle(path: List<Int>) : Boolean {
+        val visited = hashSetOf<Int>()
+        for (vertex in path) {
+            if (visited.contains(vertex))
+                return true
+            visited.add(vertex)
+        }
+        return false
     }
 
     private fun performAllJoins(currentState: State) {
@@ -138,7 +212,8 @@ class PricingProblem(
         val newElementaryRoute = Route(
             path = joinedPath,
             score = forwardState.score + backwardState.score,
-            length = forwardState.length + edgeLength + backwardState.length
+            length = forwardState.length + edgeLength + backwardState.length,
+            reducedCost = reducedCost
         )
 
         elementaryRoutes.add(newElementaryRoute)
@@ -314,8 +389,8 @@ class PricingProblem(
     private fun interleavedSearch() {
 
         // Initializing the forward and backward states at the terminal vertices
-        unprocessedForwardStates.add(State.buildTerminalState(isForward = true, vertex = source, numVertices = instance.numVertices, parameters))
-        unprocessedBackwardStates.add(State.buildTerminalState(isForward = false, vertex = destination, numVertices = instance.numVertices, parameters))
+        unprocessedForwardStates.add(State.buildTerminalState(isForward = true, vertex = source, numVertices = numVertices, parameters))
+        unprocessedBackwardStates.add(State.buildTerminalState(isForward = false, vertex = destination, numVertices = numVertices, parameters))
 
         // Flag for which side to be extended
         var processForward = true
