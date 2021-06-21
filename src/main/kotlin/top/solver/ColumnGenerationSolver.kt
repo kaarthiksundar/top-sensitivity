@@ -36,6 +36,11 @@ class ColumnGenerationSolver(
     private var vertexReducedCosts = MutableList(instance.numVertices) { 0.0 }
 
     /**
+     * 2D List of duals for enforced edges. 0.0 by default.
+     */
+    private var edgeDuals = List(instance.numVertices) { MutableList(instance.numVertices) {0.0} }
+
+    /**
      * Value of the objective of the linear relaxation of the set cover model
      */
     var lpObjective = 0.0
@@ -46,13 +51,6 @@ class ColumnGenerationSolver(
      * linear relaxation of the set cover model.
      */
     var lpSolution = mutableListOf<Pair<Route, Double>>()
-
-    /**
-     * Initially populating the list of routes using a specified number of feasible routes
-     */
-    init {
-        routes.addAll(initialRoutes(instance, parameters.numInitialRoutes))
-    }
 
     /**
      * Solve master problem (linear relaxation for set cover model) using column generation.
@@ -72,6 +70,7 @@ class ColumnGenerationSolver(
                 instance,
                 vehicleCoverDual,
                 vertexReducedCosts,
+                edgeDuals,
                 parameters
             ).generateColumns()
 
@@ -105,6 +104,16 @@ class ColumnGenerationSolver(
         for (i in 0 until instance.numVertices) {
             vertexReducedCosts[i] = vertexDuals[i] - instance.scores[i]
         }
+
+        // Updating the reduced costs by duals for enforced vertices
+        for ((vertex, dual) in setCoverModel.getMustVisitVertexDuals()) {
+            vertexReducedCosts[vertex] += dual
+        }
+
+        // Storing duals of enforced edges. Used in the pricing problem
+        edgeDuals.forEach{it.fill(0.0)} // Resetting
+        for ((edge, dual) in setCoverModel.getMustVisitEdgeDuals())
+            edgeDuals[edge.first][edge.second] = dual
 
         // Update LP solution values.
         lpObjective = setCoverModel.objective
