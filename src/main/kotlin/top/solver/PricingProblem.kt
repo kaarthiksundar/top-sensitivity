@@ -73,12 +73,6 @@ class PricingProblem(
 
     fun generateColumns(): List<Route> {
 
-        when {
-            parameters.forwardOnly -> forwardLabelingOnly()
-            parameters.backwardOnly -> backwardLabelingOnly()
-            parameters.useBidirectional -> bidirectional()
-        }
-
         return elementaryRoutes
     }
 
@@ -187,7 +181,7 @@ class PricingProblem(
             val extension = extendIfFeasible(currentState, newVertex, edgeLength) ?: continue
 
             // Extension is feasible. Update unprocessed forward states
-            if (parameters.useDomination || parameters.useBidirectional)
+            if (parameters.useDomination)
                 addIfNonDominated(extension, nonDominatedForwardStates[newVertex])
             else
                 unprocessedForwardStates.add(extension)
@@ -207,7 +201,7 @@ class PricingProblem(
             val extension = extendIfFeasible(currentState, newVertex, edgeLength) ?: continue
 
             // Extension is feasible. Update unprocessed backward states
-            if (parameters.useDomination || parameters.useBidirectional)
+            if (parameters.useDomination)
                 addIfNonDominated(extension, nonDominatedBackwardStates[newVertex])
             else
                 unprocessedBackwardStates.add(extension)
@@ -317,62 +311,7 @@ class PricingProblem(
 
     }
 
-    /**
-     * Function that performs forward labeling only to solve the pricing problem.
-     */
-    private fun forwardLabelingOnly() {
-
-        // Initial (forward) state at the source
-        unprocessedForwardStates.add(State.buildTerminalState(isForward = true, vertex = source, numVertices = instance.numVertices, parameters))
-
-        while (unprocessedForwardStates.isNotEmpty()) {
-
-            val currentState = unprocessedForwardStates.remove()
-            //val currentState = unprocessedForwardStates.removeLast()
-
-            // Checking if destination has been reached and if so, if the elementary route has negative reduced cost
-            if (currentState.vertex == destination) {
-                if (currentState.cost + vehicleCoverDual < - eps) {
-                    elementaryRoutes.add(Route(currentState.getPartialPath().asReversed(), currentState.score, currentState.length))
-
-                    // Checking if maximum number of elementary routes reached
-                    if (elementaryRoutes.size >= maxColumnsAdded)
-                        return
-                }
-            }
-            else
-                extendForward(currentState)
-        }
-    }
-
-    /**
-     * Function that performs backward labeling only to solve the pricing problem.
-     */
-    private fun backwardLabelingOnly() {
-
-        // Initial (backward) state at the destination
-        unprocessedBackwardStates.add(State.buildTerminalState(isForward = false, vertex = destination, numVertices = instance.numVertices, parameters))
-
-        while (unprocessedBackwardStates.isNotEmpty()) {
-
-           val currentState = unprocessedBackwardStates.remove()
-           //val currentState = unprocessedBackwardStates.removeLast()
-
-            // Checking if the source has been reached and if so, if the elementary route has negative reduced cost
-            if (currentState.vertex == source) {
-                if (currentState.cost + vehicleCoverDual < - eps) {
-                    elementaryRoutes.add(Route(currentState.getPartialPath(), currentState.score, currentState.length))
-
-                    if (elementaryRoutes.size >= maxColumnsAdded)
-                        return
-                }
-            }
-            else
-                extendBackward(currentState)
-        }
-    }
-
-    private fun bidirectional() : MutableList<Route> {
+    private fun interleavedSearch() {
 
         // Initializing the forward and backward states at the terminal vertices
         unprocessedForwardStates.add(State.buildTerminalState(isForward = true, vertex = source, numVertices = instance.numVertices, parameters))
@@ -388,13 +327,11 @@ class PricingProblem(
 
             if (processForward) {
                 if (unprocessedForwardStates.isNotEmpty()) {
-                    //state = unprocessedForwardStates.removeLast()
                     state = unprocessedForwardStates.remove()
                 }
             }
             else {
                 if(unprocessedBackwardStates.isNotEmpty()) {
-                    //state = unprocessedBackwardStates.removeLast()
                     state = unprocessedBackwardStates.remove()
                 }
             }
@@ -410,15 +347,12 @@ class PricingProblem(
             performAllJoins(state)
 
             if (elementaryRoutes.size >= maxColumnsAdded)
-                return elementaryRoutes
+                return
 
             // Max number of elementary routes not yet found, so extend the state
             processState(state)
 
         }
-
-        return elementaryRoutes
-
     }
 
 }
