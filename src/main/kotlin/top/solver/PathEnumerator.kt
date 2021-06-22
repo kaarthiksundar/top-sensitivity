@@ -167,5 +167,5 @@ fun generateRoute(destinationLabel: Label): Route {
     }
     path.add(label.vertex)
     path.reverse()
-    return Route(path, destinationLabel.score, destinationLabel.length)
+    return Route(path, destinationLabel.score, destinationLabel.length, 0.0)
 }
