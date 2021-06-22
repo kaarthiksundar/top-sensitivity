@@ -6,6 +6,8 @@ import top.data.Route
 import top.main.getEdgeWeight
 import java.util.*
 import kotlin.math.absoluteValue
+import mu.KLogging
+import top.main.TOPException
 
 /**
  * Class responsible for handling the pricing problem in the column generation scheme.
@@ -48,8 +50,8 @@ class PricingProblem(
 
     private val maxColumnsAdded = parameters.maxColumnsAdded
 
-    private val unprocessedForwardStates = PriorityQueue<State>()
-    private val unprocessedBackwardStates = PriorityQueue<State>()
+    private var unprocessedForwardStates = PriorityQueue<State>()
+    private var unprocessedBackwardStates = PriorityQueue<State>()
 
     private val nonDominatedForwardStates = List(numVertices) { mutableListOf<State>()}
     private val nonDominatedBackwardStates = List(numVertices) { mutableListOf<State>()}
@@ -77,6 +79,8 @@ class PricingProblem(
     private val destination = instance.destination
     private val budget = instance.budget
 
+    private var stopSearch = false
+    private var useVisitCondition = false
 
     fun generateColumns(): List<Route> {
 
@@ -85,27 +89,46 @@ class PricingProblem(
         nonDominatedBackwardStates[destination].add(State.buildTerminalState(isForward = false, vertex = destination, numVertices = numVertices, parameters))
 
         var searchIteration = 0
-        var stopSearch = false
 
         do {
 
             // Using the same duals (i.e., same previous RMP solution), but the critical vertex set is modified
+            logger.debug("Starting search iteration $searchIteration")
 
             // Clearing the forward/backward lists
+            initializeIteration()
 
             // With the current critical vertex set, find all admissible elementary routes
+            interleavedSearch()
 
             // Check if number of admissible elementary routes exceeds a set amount. If so, resolve RMP for new duals
+            if (elementaryRoutes.size >= maxColumnsAdded) {
+                logger.debug("DSSR reset due to max number of elementary routes found")
+                break
+            }
+
+            // Check if number of admissible elementary routes exceeds a minimum amount. If so, resolve RMP
+            if (elementaryRoutes.size >= parameters.maxPathsAfterSearch) {
+                logger.debug("DSSR reset due to elementary route existence")
+                break
+            }
 
             // Otherwise, from the best route find which vertices visited multiple times and update critical vertex set
+            multipleVisits()
 
-            // If best route is elementary, stop DSSR and solve RMP for new duals
+            // Change to stricter domination if no optimal route found
+            if (optimalRoute == null && !useVisitCondition) {
+                useVisitCondition = true
+                logger.debug("Repeating column search with stricter dominance checking")
+                searchIteration++
+                continue
+            }
 
-
+            // Checking if the optimal solution has multiple visits. If not, resolve RMP for new duals
+            stopSearch = isVisitedMultipleTimes.none{it}
+            logger.debug("End search iteration $searchIteration, stop: $stopSearch")
             searchIteration++
 
-            if (searchIteration == 10)
-                stopSearch = true
         } while(!stopSearch)
 
         return elementaryRoutes
@@ -124,6 +147,9 @@ class PricingProblem(
         for (i in nonDominatedForwardStates.indices) {
             nonDominatedForwardStates[i].clear()
             nonDominatedBackwardStates[i].clear()
+
+            unprocessedForwardStates.clear()
+            unprocessedBackwardStates.clear()
         }
 
         // Remaking initial states at source and destination
@@ -148,6 +174,29 @@ class PricingProblem(
             visited.add(vertex)
         }
         return false
+    }
+
+    private fun multipleVisits() {
+        // Resetting the Boolean array tracking which vertices in the optimal route are visited multiple times
+        isVisitedMultipleTimes.fill(false)
+        val optimalPath = optimalRoute?.path ?: return
+
+        val numVisits = IntArray(numVertices) { 0 }
+        // Tracking how many times each vertex has been visited
+        for (vertex in optimalPath) {
+            numVisits[vertex]++
+            if (numVisits[vertex] > 1) {
+                isVisitedMultipleTimes[vertex] = true
+                // Checking that critical vertices are visited at most once
+                if (isCritical[vertex]) {
+                    logger.error("Multiple visits to critical vertex $vertex")
+                    logger.error("Problematic route: $optimalRoute")
+                    throw TOPException("Cycles with critical vertices")
+                }
+            }
+        }
+        val multipleVisits = (0 until numVertices).filter { isVisitedMultipleTimes[it] }
+        logger.debug("Current multiple visits: $multipleVisits")
     }
 
     private fun performAllJoins(currentState: State) {
@@ -209,14 +258,20 @@ class PricingProblem(
 
         val edgeLength = graph.getEdgeWeight(forwardState.vertex, backwardState.vertex)
 
-        val newElementaryRoute = Route(
+        val newRoute = Route(
             path = joinedPath,
             score = forwardState.score + backwardState.score,
             length = forwardState.length + edgeLength + backwardState.length,
             reducedCost = reducedCost
         )
 
-        elementaryRoutes.add(newElementaryRoute)
+        // Updating the optimal route
+        if (optimalRoute == null || reducedCost <= optimalRoute!!.reducedCost - eps)
+            optimalRoute = newRoute
+
+        // Checking if the new route is an elementary route
+        if (!hasCycle(joinedPath))
+            elementaryRoutes.add(newRoute)
 
     }
 
@@ -252,6 +307,10 @@ class PricingProblem(
             val edgeLength = graph.getEdgeWeight(e)
             val newVertex = graph.getEdgeTarget(e)
 
+            // Don't extend to critical vertices more than once
+            if (currentState.inPartialPath(newVertex, parameters))
+                continue
+
             // Checking if an extension is feasible
             val extension = extendIfFeasible(currentState, newVertex, edgeLength) ?: continue
 
@@ -271,6 +330,10 @@ class PricingProblem(
         for (e in graph.incomingEdgesOf(currentVertex)) {
             val edgeLength = graph.getEdgeWeight(e)
             val newVertex = graph.getEdgeSource(e)
+
+            // Don't extend to critical vertices more than once
+            if (currentState.inPartialPath(newVertex, parameters))
+                continue
 
             // Checking if an extension is feasible
             val extension = extendIfFeasible(currentState, newVertex, edgeLength) ?: continue
@@ -304,7 +367,8 @@ class PricingProblem(
             edgeCost = edgeCost,
             edgeLength = edgeLength,
             newVertexScore = newVertexScore,
-            parameters
+            isCritical = isCritical[newVertex],
+            parameters = parameters
         )
     }
 
@@ -320,10 +384,10 @@ class PricingProblem(
         // Iterating over the existing states in reversed order. Iterating backwards leads to large speed improvements
         // when removing states in the list of existing non-dominated states
         for (i in existingStates.indices.reversed()) {
-            if (existingStates[i].dominates(extension, parameters))
+            if (existingStates[i].dominates(extension, parameters, useVisitCondition))
                 return
             if (parameters.twoWayDomination)
-                if(extension.dominates(existingStates[i], parameters))
+                if(extension.dominates(existingStates[i], parameters, useVisitCondition))
                     existingStates.removeAt(i)
         }
 
@@ -351,7 +415,7 @@ class PricingProblem(
             val targetVertex = graph.getEdgeTarget(e)
             val edgeLength = graph.getEdgeWeight(e)
 
-            if (state.length + edgeLength > budget)
+            if (isCritical[targetVertex] && state.length + edgeLength > budget)
                 state.markVertex(targetVertex, state.visitedVertices, parameters)
 
         }
@@ -421,14 +485,18 @@ class PricingProblem(
             // Finding all possible joins
             performAllJoins(state)
 
-            if (elementaryRoutes.size >= maxColumnsAdded)
+            if (elementaryRoutes.size >= maxColumnsAdded) {
+                stopSearch = true
                 return
+            }
 
             // Max number of elementary routes not yet found, so extend the state
             processState(state)
 
         }
     }
+
+    companion object : KLogging()
 
 }
 
