@@ -21,6 +21,7 @@ data class Parameters(
     val algorithm: Int,
     val eps: Double = 1e-5,
     val maxColumnsAdded: Int = 500,
+    val maxPathsAfterSearch: Int = 10,
     val numInitialRoutes: Int = 10,
     val numBits: Int = 64,
     val useDomination: Boolean = true,
