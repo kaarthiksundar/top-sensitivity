@@ -44,10 +44,13 @@ class State private constructor (
         edgeCost: Double,
         edgeLength: Double,
         newVertexScore: Double,
+        isCritical: Boolean,
         parameters: Parameters
     ): State {
         val newVisitedVertices = visitedVertices.copyOf()
-        markVertex(newVertex, newVisitedVertices, parameters)
+        // Only marking critical vertices
+        if (isCritical)
+            markVertex(newVertex, newVisitedVertices, parameters)
 
         return State(
             isForward,
@@ -94,7 +97,7 @@ class State private constructor (
     /**
      * Function that checks if this state dominates another given state.
      */
-    fun dominates(otherState: State, parameters: Parameters) : Boolean {
+    fun dominates(otherState: State, parameters: Parameters, useVisitCondition: Boolean) : Boolean {
 
         // States can only be compared if they have a partial path ending at the same vertex
         if (vertex != otherState.vertex)
@@ -124,12 +127,14 @@ class State private constructor (
             strict = true
 
         // Checking visited vertices
-        for (i in visitedVertices.indices) {
-            if (visitedVertices[i] > otherState.visitedVertices[i])
-                return false
+        if (useVisitCondition) {
+            for (i in visitedVertices.indices) {
+                if (visitedVertices[i] and otherState.visitedVertices[i].inv() != 0L)
+                    return false
 
-            if (visitedVertices[i] < otherState.visitedVertices[i])
-                strict = true
+                if (!strict && (visitedVertices[i].inv() and otherState.visitedVertices[i] != 0L))
+                    strict = true
+            }
         }
 
         return strict
