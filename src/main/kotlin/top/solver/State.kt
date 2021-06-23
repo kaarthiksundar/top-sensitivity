@@ -158,7 +158,7 @@ class State private constructor (
 
             arrayOfLongs[quotient] = 1L shl remainder
 
-            return State(isForward, vertex, 0.0, 0.0, 0.0, null, LongArray(numberOfLongs) {0L})
+            return State(isForward, vertex, 0.0, 0.0, 0.0, null, arrayOfLongs)
         }
     }
 
