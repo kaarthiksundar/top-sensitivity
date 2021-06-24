@@ -173,7 +173,7 @@ class State private constructor (
             val quotient : Int = vertex / parameters.numBits
             val remainder : Int = vertex % parameters.numBits
 
-            arrayOfLongs[quotient] = 1L shl remainder
+            arrayOfLongs[quotient] = arrayOfLongs[quotient] or (1L shl remainder)
 
             return State(isForward, vertex, 0.0, 0.0, 0.0, null, arrayOfLongs)
         }
