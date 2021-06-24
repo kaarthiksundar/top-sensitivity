@@ -203,10 +203,7 @@ class PricingProblem(
             val extension = extendIfFeasible(currentState, newVertex, edgeLength) ?: continue
 
             // Extension is feasible. Update unprocessed backward states
-            if (parameters.useDomination)
-                addIfNonDominated(extension, nonDominatedBackwardStates[newVertex])
-            else
-                unprocessedBackwardStates.add(extension)
+            addIfNonDominated(extension, nonDominatedBackwardStates[newVertex])
         }
     }
 
@@ -246,12 +243,15 @@ class PricingProblem(
 
         // Iterating over the existing states in reversed order. Iterating backwards leads to large speed improvements
         // when removing states in the list of existing non-dominated states
-        for (i in existingStates.indices.reversed()) {
-            if (existingStates[i].dominates(extension, parameters))
-                return
-            if (parameters.twoWayDomination)
-                if(extension.dominates(existingStates[i], parameters))
-                    existingStates.removeAt(i)
+
+        if (parameters.useDomination) {
+            for (i in existingStates.indices.reversed()) {
+                if (existingStates[i].dominates(extension, parameters))
+                    return
+                if (parameters.twoWayDomination)
+                    if (extension.dominates(existingStates[i], parameters))
+                        existingStates.removeAt(i)
+            }
         }
 
         // Current state is not dominated by previously found non-dominated states. Add to list of non-dominated states
