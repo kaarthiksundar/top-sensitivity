@@ -239,7 +239,7 @@ class PricingProblem(
     private fun addIfNonDominated(extension: State, existingStates: MutableList<State>) {
 
         // Marking all unreachable nodes before checking for dominance
-        updateUnreachableVertices(extension)
+        //updateUnreachableVertices(extension)
 
         // Iterating over the existing states in reversed order. Iterating backwards leads to large speed improvements
         // when removing states in the list of existing non-dominated states
@@ -273,14 +273,27 @@ class PricingProblem(
 
         val currentVertex = state.vertex
 
-        for (e in graph.outgoingEdgesOf(currentVertex)) {
+        if (state.isForward) {
+            for (e in graph.outgoingEdgesOf(currentVertex)) {
 
-            val targetVertex = graph.getEdgeTarget(e)
-            val edgeLength = graph.getEdgeWeight(e)
+                val targetVertex = graph.getEdgeTarget(e)
+                val edgeLength = graph.getEdgeWeight(e)
 
-            if (state.length + edgeLength > budget)
-                state.markVertex(targetVertex, state.visitedVertices, parameters)
+                if (state.length + edgeLength > budget)
+                    state.markVertex(targetVertex, state.visitedVertices, parameters)
 
+            }
+        }
+        else {
+            for (e in graph.incomingEdgesOf(currentVertex)) {
+
+                val targetVertex = graph.getEdgeSource(e)
+                val edgeLength = graph.getEdgeWeight(e)
+
+                if (state.length + edgeLength > budget)
+                    state.markVertex(targetVertex, state.visitedVertices, parameters)
+
+            }
         }
 
     }
