@@ -456,14 +456,28 @@ class PricingProblem(
 
         val currentVertex = state.vertex
 
-        for (e in graph.outgoingEdgesOf(currentVertex)) {
+        if (state.isForward) {
+            for (e in graph.outgoingEdgesOf(currentVertex)) {
 
-            val targetVertex = graph.getEdgeTarget(e)
-            val edgeLength = graph.getEdgeWeight(e)
+                val targetVertex = graph.getEdgeTarget(e)
+                val edgeLength = graph.getEdgeWeight(e)
 
-            if (isCritical[targetVertex] && state.length + edgeLength > budget)
-                state.markVertex(targetVertex, state.visitedVertices, parameters)
+                if (isCritical[targetVertex] && state.length + edgeLength > budget)
+                    state.markVertex(targetVertex, state.visitedVertices, parameters)
 
+            }
+        }
+        else
+        {
+            for (e in graph.incomingEdgesOf(currentVertex)) {
+
+                val targetVertex = graph.getEdgeSource(e)
+                val edgeLength = graph.getEdgeWeight(e)
+
+                if (isCritical[targetVertex] && state.length + edgeLength > budget)
+                    state.markVertex(targetVertex, state.visitedVertices, parameters)
+
+            }
         }
 
     }
