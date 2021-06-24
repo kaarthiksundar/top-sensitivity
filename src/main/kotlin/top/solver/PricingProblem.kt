@@ -82,6 +82,9 @@ class PricingProblem(
     private var stopSearch = false
     private var useVisitCondition = false
 
+    /**
+     * Function that performs I-DSSR to find elementary routes to add to the set cover model formulation in the RMP.
+     */
     fun generateColumns(): List<Route> {
 
         // Initializing the (non-dominated) states at the source and destination
@@ -134,6 +137,10 @@ class PricingProblem(
         return elementaryRoutes
     }
 
+    /**
+     * Function that updates the critical vertex set and resets the lists of non-dominated states and unprocessed
+     * states
+     */
     private fun initializeIteration() {
         // Updating the critical vertices
         for (i in isCritical.indices) {
@@ -166,6 +173,9 @@ class PricingProblem(
         }
     }
 
+    /**
+     * Function that checks if a given path has a cycle.
+     */
     private fun hasCycle(path: List<Int>) : Boolean {
         val visited = hashSetOf<Int>()
         for (vertex in path) {
@@ -176,6 +186,10 @@ class PricingProblem(
         return false
     }
 
+    /**
+     * Function that identifies which vertices in the optimal path (not necessarily elementary) were visited multiple
+     * times and marks these vertices as critical vertices for the next iteration of DSSR.
+     */
     private fun multipleVisits() {
         // Resetting the Boolean array tracking which vertices in the optimal route are visited multiple times
         isVisitedMultipleTimes.fill(false)
@@ -199,6 +213,10 @@ class PricingProblem(
         logger.debug("Current multiple visits: $multipleVisits")
     }
 
+    /**
+     * Function that takes a forward (backward) state and joins it with all feasible backward (forward) non-dominated
+     * states
+     */
     private fun performAllJoins(currentState: State) {
         val currentVertex = currentState.vertex
 
@@ -238,6 +256,10 @@ class PricingProblem(
         }
     }
 
+    /**
+     * Function that joins two states to produce a complete path from the source to the destination. If the resulting
+     * path is an admissible elementary route, it is added to the list of elementary routes found.
+     */
     private fun join(forwardState: State, backwardState: State) {
 
         // Checking if the join is feasible
@@ -275,6 +297,10 @@ class PricingProblem(
 
     }
 
+    /**
+     * Function that takes in a state (either forward or backward), checks if the path length does not exceed half the
+     * budget and then performs the appropriate extension for that state.
+     */
     private fun processState(state: State) {
 
         if (state.length >= budget / 2 + eps)
@@ -298,6 +324,10 @@ class PricingProblem(
 
     }
 
+    /**
+     * Function that finds all feasible extensions of a forward state and updates the lists of non-dominated
+     * forward states and unprocessed forward states.
+     */
     private fun extendForward(currentState: State) {
         // Vertex corresponding to partial path of forward state
         val currentVertex = currentState.vertex
@@ -311,6 +341,10 @@ class PricingProblem(
             if (currentState.inPartialPath(newVertex, parameters))
                 continue
 
+            // No 2-cycles
+            if (currentState.parent != null && currentState.parent.vertex == newVertex)
+                continue
+
             // Checking if an extension is feasible
             val extension = extendIfFeasible(currentState, newVertex, edgeLength) ?: continue
 
@@ -322,6 +356,10 @@ class PricingProblem(
         }
     }
 
+    /**
+     * Function that finds all feasible extensions of a backward state and updates the lists of non-dominated
+     * backward states and unprocessed backward states.
+     */
     private fun extendBackward(currentState: State) {
         // Vertex corresponding to partial path of backward state
         val currentVertex = currentState.vertex
@@ -335,6 +373,10 @@ class PricingProblem(
             if (currentState.inPartialPath(newVertex, parameters))
                 continue
 
+            // No 2-cycles
+            if (currentState.parent != null && currentState.parent.vertex == newVertex)
+                continue
+
             // Checking if an extension is feasible
             val extension = extendIfFeasible(currentState, newVertex, edgeLength) ?: continue
 
@@ -346,6 +388,10 @@ class PricingProblem(
         }
     }
 
+    /**
+     * Function that performs an extension (either forward or backward) if it is feasible in the sense no critical
+     * vertex is visited more than once and the budget is not exceeded.
+     */
     private fun extendIfFeasible(currentState: State, newVertex: Int, edgeLength: Double) : State? {
 
         // Length of partial path after extension
@@ -422,6 +468,9 @@ class PricingProblem(
 
     }
 
+    /**
+     * Function that checks if two states satisfy the halfway condition.
+     */
     private fun halfway(forwardState: State, backwardState: State) : Boolean {
 
         val currDiff = (forwardState.length - backwardState.length).absoluteValue
@@ -450,6 +499,9 @@ class PricingProblem(
 
     }
 
+    /**
+     * Function that runs the actual interleaved search algorithm to find admissible elementary routes.
+     */
     private fun interleavedSearch() {
 
         // Initializing the forward and backward states at the terminal vertices
