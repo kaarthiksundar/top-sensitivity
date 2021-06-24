@@ -125,10 +125,10 @@ class State private constructor (
 
         // Checking visited vertices
         for (i in visitedVertices.indices) {
-            if (visitedVertices[i] > otherState.visitedVertices[i])
+            if (visitedVertices[i] and otherState.visitedVertices[i].inv() != 0L)
                 return false
 
-            if (visitedVertices[i] < otherState.visitedVertices[i])
+            if (!strict && (visitedVertices[i].inv() and otherState.visitedVertices[i] != 0L))
                 strict = true
         }
 
