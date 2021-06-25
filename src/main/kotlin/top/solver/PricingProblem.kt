@@ -236,7 +236,7 @@ class PricingProblem(
     private fun addIfNonDominated(extension: State, existingStates: MutableList<State>) {
 
         // Marking all unreachable nodes before checking for dominance
-        //updateUnreachableVertices(extension)
+        updateUnreachableVertices(extension)
 
         // Iterating over the existing states in reversed order. Iterating backwards leads to large speed improvements
         // when removing states in the list of existing non-dominated states

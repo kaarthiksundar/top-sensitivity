@@ -79,12 +79,36 @@ class State private constructor (
      */
     fun hasCommonVisits(otherState: State) : Boolean {
 
+        /*
         for (i in visitedVertices.indices) {
 
             // Checking the AND operation yields 0L (i.e., checking if a vertex is shared)
             if (visitedVertices[i] and otherState.visitedVertices[i] != 0L) {
                 return true
             }
+        }
+
+        return false
+
+         */
+
+        // Collecting vertices visited by forward state
+        val visited = hashSetOf<Int>()
+
+        var state : State? = this
+        while (state != null) {
+            visited.add(state.vertex)
+            state = state.parent
+        }
+
+        // Checking if backward state has common visits
+        state = otherState
+        while (state != null) {
+
+            if (visited.contains(state.vertex))
+                return true
+
+            state = state.parent
         }
 
         return false
