@@ -21,9 +21,9 @@ class State private constructor (
     val score: Double,
     val length: Double,
     val parent: State?,
-    val visitedVertices: LongArray,
-    val unreachableVertices: LongArray,
-    val numVerticesVisited: Int
+    private val visitedVertices: LongArray,
+    private val unreachableVertices: LongArray,
+    private val numVerticesVisited: Int
 ) : Comparable<State>{
 
     /**
