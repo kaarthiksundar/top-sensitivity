@@ -183,10 +183,7 @@ class PricingProblem(
             val extension = extendIfFeasible(currentState, newVertex, edgeLength) ?: continue
 
             // Extension is feasible. Update unprocessed forward states
-            if (parameters.useDomination)
-                addIfNonDominated(extension, nonDominatedForwardStates[newVertex])
-            else
-                unprocessedForwardStates.add(extension)
+            addIfNonDominated(extension, nonDominatedForwardStates[newVertex])
         }
     }
 
