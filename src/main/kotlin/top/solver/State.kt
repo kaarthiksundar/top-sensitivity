@@ -22,7 +22,8 @@ class State private constructor (
     val length: Double,
     val parent: State?,
     val visitedVertices: LongArray,
-    val unreachableVertices: LongArray
+    val unreachableVertices: LongArray,
+    val numVisited: Int
 ) : Comparable<State>{
 
     /**
@@ -58,7 +59,8 @@ class State private constructor (
             length = length + edgeLength,
             parent = this,
             visitedVertices = newVisitedVertices,
-            unreachableVertices = unreachableVertices
+            unreachableVertices = unreachableVertices.copyOf(),
+            numVisited = numVisited + 1
         )
     }
 
@@ -123,6 +125,13 @@ class State private constructor (
             return false
 
         if (length <= otherState.length - parameters.eps)
+            strict = true
+
+        // Checking the number of visited vertices is less than or equal to the number of visited vertices of other
+        if (numVisited > otherState.numVisited)
+            return false
+
+        if (numVisited < otherState.numVisited)
             strict = true
 
         // Checking visited vertices
@@ -193,7 +202,7 @@ class State private constructor (
 
             arrayOfLongs[quotient] = arrayOfLongs[quotient] or (1L shl remainder)
 
-            return State(isForward, vertex, 0.0, 0.0, 0.0, null, arrayOfLongs, LongArray(numberOfLongs) {0L})
+            return State(isForward, vertex, 0.0, 0.0, 0.0, null, arrayOfLongs, LongArray(numberOfLongs) {0L}, numVisited = 1)
         }
     }
 
