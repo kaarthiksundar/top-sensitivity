@@ -21,7 +21,8 @@ class State private constructor (
     val score: Double,
     val length: Double,
     val parent: State?,
-    val visitedVertices: LongArray
+    val visitedVertices: LongArray,
+    val unreachableVertices: LongArray
 ) : Comparable<State>{
 
     /**
@@ -47,7 +48,7 @@ class State private constructor (
         parameters: Parameters
     ): State {
         val newVisitedVertices = visitedVertices.copyOf()
-        markVertex(newVertex, newVisitedVertices, parameters)
+        markVisited(newVertex, newVisitedVertices, parameters)
 
         return State(
             isForward,
@@ -56,7 +57,8 @@ class State private constructor (
             score = score + newVertexScore,
             length = length + edgeLength,
             parent = this,
-            visitedVertices = newVisitedVertices
+            visitedVertices = newVisitedVertices,
+            unreachableVertices = unreachableVertices
         )
     }
 
@@ -79,7 +81,7 @@ class State private constructor (
      */
     fun hasCommonVisits(otherState: State) : Boolean {
 
-        /*
+
         for (i in visitedVertices.indices) {
 
             // Checking the AND operation yields 0L (i.e., checking if a vertex is shared)
@@ -89,30 +91,6 @@ class State private constructor (
         }
 
         return false
-
-         */
-
-        // Collecting vertices visited by forward state
-        val visited = hashSetOf<Int>()
-
-        var state : State? = this
-        while (state != null) {
-            visited.add(state.vertex)
-            state = state.parent
-        }
-
-        // Checking if backward state has common visits
-        state = otherState
-        while (state != null) {
-
-            if (visited.contains(state.vertex))
-                return true
-
-            state = state.parent
-        }
-
-        return false
-
     }
 
     /**
@@ -149,10 +127,15 @@ class State private constructor (
 
         // Checking visited vertices
         for (i in visitedVertices.indices) {
-            if (visitedVertices[i] and otherState.visitedVertices[i].inv() != 0L)
+
+            // Combining information from visited bits and unreachable bits
+            val thisCombined = visitedVertices[i] or unreachableVertices[i]
+            val otherCombined = otherState.visitedVertices[i] or otherState.unreachableVertices[i]
+
+            if (thisCombined and otherCombined.inv() != 0L)
                 return false
 
-            if (!strict && (visitedVertices[i].inv() and otherState.visitedVertices[i] != 0L))
+            if (!strict && (thisCombined.inv() and otherCombined != 0L))
                 strict = true
         }
 
@@ -160,7 +143,7 @@ class State private constructor (
 
     }
 
-    fun markVertex(vertex: Int, visitedVertices: LongArray, parameters: Parameters) {
+    fun markVisited(vertex: Int, visitedVertices: LongArray, parameters: Parameters) {
 
         // Finding which set of n bits to update
         val quotient : Int = vertex / parameters.numBits
@@ -171,6 +154,17 @@ class State private constructor (
         // Updating
         visitedVertices[quotient] = visitedVertices[quotient] or (1L shl remainder)
 
+    }
+
+    fun markUnreachable(vertex: Int, parameters: Parameters) {
+        // Finding which set of bits to update
+        val quotient : Int = vertex / parameters.numBits
+
+        // Finding which bit in the set of bits to update
+        val remainder: Int = vertex % parameters.numBits
+
+        // Marking this vertex as unreachable
+        unreachableVertices[quotient] = unreachableVertices[quotient] or (1L shl remainder)
     }
 
     fun inPartialPath(vertex: Int, parameters: Parameters) : Boolean {
@@ -199,7 +193,7 @@ class State private constructor (
 
             arrayOfLongs[quotient] = arrayOfLongs[quotient] or (1L shl remainder)
 
-            return State(isForward, vertex, 0.0, 0.0, 0.0, null, arrayOfLongs)
+            return State(isForward, vertex, 0.0, 0.0, 0.0, null, arrayOfLongs, LongArray(numberOfLongs) {0L})
         }
     }
 
