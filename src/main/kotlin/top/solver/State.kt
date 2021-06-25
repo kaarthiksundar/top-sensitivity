@@ -21,8 +21,8 @@ class State private constructor (
     val score: Double,
     val length: Double,
     val parent: State?,
-    val visitedVertices: LongArray,
-    val unreachableVertices: LongArray,
+    private val visitedVertices: LongArray,
+    private val unreachableVertices: LongArray,
     val numVisited: Int
 ) : Comparable<State>{
 
@@ -152,7 +152,7 @@ class State private constructor (
 
     }
 
-    fun markVisited(vertex: Int, visitedVertices: LongArray, parameters: Parameters) {
+    private fun markVisited(vertex: Int, visitedVertices: LongArray, parameters: Parameters) {
 
         // Finding which set of n bits to update
         val quotient : Int = vertex / parameters.numBits
