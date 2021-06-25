@@ -463,7 +463,7 @@ class PricingProblem(
                 val edgeLength = graph.getEdgeWeight(e)
 
                 if (isCritical[targetVertex] && state.length + edgeLength > budget)
-                    state.markVertex(targetVertex, state.visitedVertices, parameters)
+                    state.markUnreachable(targetVertex, parameters)
 
             }
         }
@@ -475,7 +475,7 @@ class PricingProblem(
                 val edgeLength = graph.getEdgeWeight(e)
 
                 if (isCritical[targetVertex] && state.length + edgeLength > budget)
-                    state.markVertex(targetVertex, state.visitedVertices, parameters)
+                    state.markUnreachable(targetVertex, parameters)
 
             }
         }

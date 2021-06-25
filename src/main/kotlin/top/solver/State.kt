@@ -21,7 +21,9 @@ class State private constructor (
     val score: Double,
     val length: Double,
     val parent: State?,
-    val visitedVertices: LongArray
+    val visitedVertices: LongArray,
+    val unreachableVertices: LongArray,
+    val numVerticesVisited: Int
 ) : Comparable<State>{
 
     /**
@@ -50,7 +52,7 @@ class State private constructor (
         val newVisitedVertices = visitedVertices.copyOf()
         // Only marking critical vertices
         if (isCritical)
-            markVertex(newVertex, newVisitedVertices, parameters)
+            markVisited(newVertex, newVisitedVertices, parameters)
 
         return State(
             isForward,
@@ -59,7 +61,9 @@ class State private constructor (
             score = score + newVertexScore,
             length = length + edgeLength,
             parent = this,
-            visitedVertices = newVisitedVertices
+            visitedVertices = newVisitedVertices,
+            unreachableVertices = unreachableVertices.copyOf(),
+            numVerticesVisited = numVerticesVisited + 1
         )
     }
 
@@ -128,11 +132,23 @@ class State private constructor (
 
         // Checking visited vertices
         if (useVisitCondition) {
+
+            // Checking this state visited at most the same number of vertices as the other state
+            if (numVerticesVisited > otherState.numVerticesVisited)
+                return false
+
+            if (numVerticesVisited < otherState.numVerticesVisited)
+                strict = true
+
             for (i in visitedVertices.indices) {
-                if (visitedVertices[i] and otherState.visitedVertices[i].inv() != 0L)
+
+                val thisCombined = visitedVertices[i] or unreachableVertices[i]
+                val otherCombined = otherState.visitedVertices[i] or otherState.unreachableVertices[i]
+
+                if (thisCombined and otherCombined.inv() != 0L)
                     return false
 
-                if (!strict && (visitedVertices[i].inv() and otherState.visitedVertices[i] != 0L))
+                if (!strict && (thisCombined.inv() and otherCombined != 0L))
                     strict = true
             }
         }
@@ -141,7 +157,7 @@ class State private constructor (
 
     }
 
-    fun markVertex(vertex: Int, visitedVertices: LongArray, parameters: Parameters) {
+    private fun markVisited(vertex: Int, visitedVertices: LongArray, parameters: Parameters) {
 
         // Finding which set of n bits to update
         val quotient : Int = vertex / parameters.numBits
@@ -151,6 +167,19 @@ class State private constructor (
 
         // Updating
         visitedVertices[quotient] = visitedVertices[quotient] or (1L shl remainder)
+
+    }
+
+    fun markUnreachable(vertex: Int, parameters: Parameters) {
+
+        // Finding which set of n bits to update
+        val quotient : Int = vertex / parameters.numBits
+
+        // Finding which bit in the set of n bits to update
+        val remainder : Int = vertex % parameters.numBits
+
+        // Updating
+        unreachableVertices[quotient] = unreachableVertices[quotient] or (1L shl remainder)
 
     }
 
@@ -180,7 +209,7 @@ class State private constructor (
 
             arrayOfLongs[quotient] = 1L shl remainder
 
-            return State(isForward, vertex, 0.0, 0.0, 0.0, null, LongArray(numberOfLongs) {0L})
+            return State(isForward, vertex, 0.0, 0.0, 0.0, null, arrayOfLongs, LongArray(numberOfLongs) {0L}, 1)
         }
     }
 
