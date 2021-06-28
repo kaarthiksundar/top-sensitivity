@@ -258,6 +258,10 @@ class PricingProblem(
      */
     private fun join(forwardState: State, backwardState: State) {
 
+        val t = mutableListOf<Int>()
+        t.addAll(forwardState.getPartialPath().asReversed())
+        t.addAll(backwardState.getPartialPath())
+
         // Checking if the join is feasible
         if (!isFeasibleJoin(forwardState, backwardState) || !halfway(forwardState, backwardState))
             return
@@ -299,7 +303,7 @@ class PricingProblem(
      */
     private fun processState(state: State) {
 
-        if (state.length >= budget / 2 + eps)
+        if (state.length >= budget / 2 - eps)
             return
 
         if (state.isForward) extendForward(state)
@@ -511,8 +515,10 @@ class PricingProblem(
     private fun interleavedSearch() {
 
         // Initializing the forward and backward states at the terminal vertices
-        unprocessedForwardStates.add(State.buildTerminalState(isForward = true, vertex = source, numVertices = numVertices, parameters))
-        unprocessedBackwardStates.add(State.buildTerminalState(isForward = false, vertex = destination, numVertices = numVertices, parameters))
+        //unprocessedForwardStates.add(State.buildTerminalState(isForward = true, vertex = source, numVertices = numVertices, parameters))
+        //unprocessedBackwardStates.add(State.buildTerminalState(isForward = false, vertex = destination, numVertices = numVertices, parameters))
+        extendForward(State.buildTerminalState(isForward = true, vertex = source, numVertices = numVertices, parameters))
+        extendBackward(State.buildTerminalState(isForward = false, vertex = destination, numVertices = numVertices, parameters))
 
         // Flag for which side to be extended
         var processForward = true
