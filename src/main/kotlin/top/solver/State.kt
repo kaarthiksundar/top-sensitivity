@@ -181,7 +181,9 @@ class State private constructor (
         val quotient : Int = vertex / parameters.numBits
         val remainder : Int = vertex % parameters.numBits
 
-        return visitedVertices[quotient] and (1L shl remainder) != 0L
+        val combined = visitedVertices[quotient] or unreachableVertices[quotient]
+
+        return combined and (1L shl remainder) != 0L
 
     }
 
