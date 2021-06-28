@@ -329,6 +329,10 @@ class PricingProblem(
         unprocessedForwardStates.add(State.buildTerminalState(isForward = true, vertex = source, numVertices = instance.numVertices, parameters))
         unprocessedBackwardStates.add(State.buildTerminalState(isForward = false, vertex = destination, numVertices = instance.numVertices, parameters))
 
+        // Adding initial terminal states to non-dominated lists
+        nonDominatedForwardStates[source].add(State.buildTerminalState(isForward = true, vertex = source, numVertices = instance.numVertices, parameters))
+        nonDominatedBackwardStates[destination].add(State.buildTerminalState(isForward = false, vertex = destination, numVertices = instance.numVertices, parameters))
+
         // Flag for which side to be extended
         var processForward = true
 
