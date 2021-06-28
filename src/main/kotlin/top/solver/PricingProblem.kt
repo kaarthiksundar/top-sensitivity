@@ -87,10 +87,6 @@ class PricingProblem(
      */
     fun generateColumns(): List<Route> {
 
-        // Initializing the (non-dominated) states at the source and destination
-        nonDominatedForwardStates[source].add(State.buildTerminalState(isForward = true, vertex = source, numVertices = numVertices, parameters))
-        nonDominatedBackwardStates[destination].add(State.buildTerminalState(isForward = false, vertex = destination, numVertices = numVertices, parameters))
-
         var searchIteration = 0
 
         do {
@@ -517,9 +513,6 @@ class PricingProblem(
         // Initializing the forward and backward states at the terminal vertices
         unprocessedForwardStates.add(State.buildTerminalState(isForward = true, vertex = source, numVertices = numVertices, parameters))
         unprocessedBackwardStates.add(State.buildTerminalState(isForward = false, vertex = destination, numVertices = numVertices, parameters))
-
-        nonDominatedForwardStates[source].add(State.buildTerminalState(isForward = true, vertex = source, numVertices = numVertices, parameters))
-        nonDominatedBackwardStates[destination].add(State.buildTerminalState(isForward = false, vertex = destination, numVertices = numVertices, parameters))
 
         // Flag for which side to be extended
         var processForward = true
