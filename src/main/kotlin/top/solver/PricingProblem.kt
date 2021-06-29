@@ -192,9 +192,6 @@ class PricingProblem(
             // Checking if an extension is feasible
             val extension = extendIfFeasible(currentState, newVertex, edgeLength) ?: continue
 
-            // Extension is feasible. Update unprocessed forward states
-            //addIfNonDominated(extension, nonDominatedForwardStates[newVertex])
-
             // Extension is feasible. Add to unprocessed forward states if it is not dominated
             if (!isDominated(extension, nonDominatedForwardStates[newVertex]))
                 unprocessedForwardStates.add(extension)
@@ -213,9 +210,6 @@ class PricingProblem(
 
             // Checking if an extension is feasible
             val extension = extendIfFeasible(currentState, newVertex, edgeLength) ?: continue
-
-            // Extension is feasible. Update unprocessed backward states
-            //addIfNonDominated(extension, nonDominatedBackwardStates[newVertex])
 
             // Extension is feasible. Add to unprocessed backward states if it is not dominated
             if (!isDominated(extension, nonDominatedBackwardStates[newVertex]))
@@ -374,15 +368,8 @@ class PricingProblem(
     private fun bidirectional() : MutableList<Route> {
 
         // Initializing the forward and backward states at the terminal vertices
-        //unprocessedForwardStates.add(State.buildTerminalState(true, source, instance.numVertices, parameters))
-        //unprocessedBackwardStates.add(State.buildTerminalState(false, destination, instance.numVertices, parameters))
-
         processState(State.buildTerminalState(true, source, instance.numVertices, parameters))
         processState(State.buildTerminalState(false, destination, instance.numVertices, parameters))
-
-        // Adding initial terminal states to non-dominated lists
-        //nonDominatedForwardStates[source].add(State.buildTerminalState(isForward = true, vertex = source, numVertices = instance.numVertices, parameters))
-        //nonDominatedBackwardStates[destination].add(State.buildTerminalState(isForward = false, vertex = destination, numVertices = instance.numVertices, parameters))
 
         while (unprocessedForwardStates.isNotEmpty() || unprocessedBackwardStates.isNotEmpty()) {
 
