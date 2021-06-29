@@ -53,6 +53,8 @@ class PricingProblem(
 
     private val maxColumnsAdded = parameters.maxColumnsAdded
 
+    private var processForward = true
+
     /**
      * Solve the pricing problem (elementary shortest path problem with resource constraints)
      *
@@ -149,11 +151,19 @@ class PricingProblem(
 
     private fun processState(state: State) {
 
-        if (state.length >= budget / 2 + eps)
+        if (state.length >= budget / 2 - eps)
             return
 
-        if (state.isForward) extendForward(state)
-        else extendBackward(state)
+        // Adding to non-dominated list and extending
+
+        if (state.isForward) {
+            nonDominatedForwardStates[state.vertex].add(state)
+            extendForward(state)
+        }
+        else {
+            nonDominatedBackwardStates[state.vertex].add(state)
+            extendBackward(state)
+        }
 
     }
 
@@ -183,7 +193,12 @@ class PricingProblem(
             val extension = extendIfFeasible(currentState, newVertex, edgeLength) ?: continue
 
             // Extension is feasible. Update unprocessed forward states
-            addIfNonDominated(extension, nonDominatedForwardStates[newVertex])
+            //addIfNonDominated(extension, nonDominatedForwardStates[newVertex])
+
+            // Extension is feasible. Add to unprocessed forward states if it is not dominated
+            if (!isDominated(extension, nonDominatedForwardStates[newVertex]))
+                unprocessedForwardStates.add(extension)
+
         }
     }
 
@@ -200,7 +215,11 @@ class PricingProblem(
             val extension = extendIfFeasible(currentState, newVertex, edgeLength) ?: continue
 
             // Extension is feasible. Update unprocessed backward states
-            addIfNonDominated(extension, nonDominatedBackwardStates[newVertex])
+            //addIfNonDominated(extension, nonDominatedBackwardStates[newVertex])
+
+            // Extension is feasible. Add to unprocessed backward states if it is not dominated
+            if (!isDominated(extension, nonDominatedBackwardStates[newVertex]))
+                unprocessedBackwardStates.add(extension)
         }
     }
 
@@ -227,6 +246,35 @@ class PricingProblem(
             newVertexScore = newVertexScore,
             parameters
         )
+    }
+
+    private fun isDominated(state: State, nonDominatedStates: MutableList<State>) : Boolean {
+
+        // Marking all unreachable nodes before checking for dominance
+        updateUnreachableVertices(state)
+
+        // Iterating over the non-dominated states to check if generated state from extension is dominated.
+        // Iteration done in reverse to allow for removal.
+        if (parameters.useDomination) {
+            for (i in nonDominatedStates.indices.reversed()) {
+                if (nonDominatedStates[i].dominates(state, parameters)) {
+                    // Extension is dominated by an existing non-dominated state, so the extension is not considered
+                    // for any joins.
+                    return true
+                }
+
+                if (parameters.twoWayDomination) {
+                    // If the extension dominates an existing non-dominated state, that state is removed from the
+                    // list of non-dominated states
+                    if (state.dominates(nonDominatedStates[i], parameters))
+                        nonDominatedStates.removeAt(i)
+                }
+
+            }
+        }
+
+        // State is not dominated by any of the existing non-dominated states
+        return false
     }
 
     /**
@@ -326,15 +374,15 @@ class PricingProblem(
     private fun bidirectional() : MutableList<Route> {
 
         // Initializing the forward and backward states at the terminal vertices
-        unprocessedForwardStates.add(State.buildTerminalState(isForward = true, vertex = source, numVertices = instance.numVertices, parameters))
-        unprocessedBackwardStates.add(State.buildTerminalState(isForward = false, vertex = destination, numVertices = instance.numVertices, parameters))
+        //unprocessedForwardStates.add(State.buildTerminalState(true, source, instance.numVertices, parameters))
+        //unprocessedBackwardStates.add(State.buildTerminalState(false, destination, instance.numVertices, parameters))
+
+        processState(State.buildTerminalState(true, source, instance.numVertices, parameters))
+        processState(State.buildTerminalState(false, destination, instance.numVertices, parameters))
 
         // Adding initial terminal states to non-dominated lists
-        nonDominatedForwardStates[source].add(State.buildTerminalState(isForward = true, vertex = source, numVertices = instance.numVertices, parameters))
-        nonDominatedBackwardStates[destination].add(State.buildTerminalState(isForward = false, vertex = destination, numVertices = instance.numVertices, parameters))
-
-        // Flag for which side to be extended
-        var processForward = true
+        //nonDominatedForwardStates[source].add(State.buildTerminalState(isForward = true, vertex = source, numVertices = instance.numVertices, parameters))
+        //nonDominatedBackwardStates[destination].add(State.buildTerminalState(isForward = false, vertex = destination, numVertices = instance.numVertices, parameters))
 
         while (unprocessedForwardStates.isNotEmpty() || unprocessedBackwardStates.isNotEmpty()) {
 
