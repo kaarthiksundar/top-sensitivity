@@ -64,6 +64,14 @@ class State private constructor (
         )
     }
 
+    override fun toString(): String {
+        val typeStr = if (isForward) "forward" else "backward"
+
+        val path = if(isForward) getPartialPath().reversed() else getPartialPath()
+
+        return "State($typeStr,vertex = $vertex,length= $length,score = $score, reduced cost =$cost, path = $path)"
+    }
+
     /**
      * Function that returns the partial path corresponding to the label. The order the vertices are visited
      * is in most recently visited to first visited.
