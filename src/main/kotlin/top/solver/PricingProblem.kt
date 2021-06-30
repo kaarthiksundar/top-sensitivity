@@ -150,10 +150,10 @@ class PricingProblem(
         for (i in nonDominatedForwardStates.indices) {
             nonDominatedForwardStates[i].clear()
             nonDominatedBackwardStates[i].clear()
-
-            unprocessedForwardStates.clear()
-            unprocessedBackwardStates.clear()
         }
+
+        unprocessedForwardStates.clear()
+        unprocessedBackwardStates.clear()
 
         // Remaking initial states at source and destination
         nonDominatedForwardStates[source].add(State.buildTerminalState(isForward = true, vertex = source, numVertices = numVertices, parameters))
