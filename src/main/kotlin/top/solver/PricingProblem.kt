@@ -151,8 +151,15 @@ class PricingProblem(
 
     private fun processState(state: State) {
 
-        if (state.length >= budget / 2 - eps)
+        if (state.length >= budget / 2 - eps) {
+
+            if (state.isForward)
+                nonDominatedForwardStates[state.vertex].add(state)
+            else
+                nonDominatedBackwardStates[state.vertex].add(state)
+
             return
+        }
 
         // Adding to non-dominated list and extending
 
