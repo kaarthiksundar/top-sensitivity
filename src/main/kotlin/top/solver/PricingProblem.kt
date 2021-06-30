@@ -160,7 +160,8 @@ class PricingProblem(
         nonDominatedBackwardStates[destination].add(State.buildTerminalState(isForward = false, vertex = destination, numVertices = numVertices, parameters))
 
         // Update optimal route with best cached elementary route
-        if (optimalRoute != null && hasCycle(optimalRoute!!.path)) {
+        //if (optimalRoute != null && hasCycle(optimalRoute!!.path)) {
+        if (optimalRoute != null && !optimalRoute!!.isElementary) {
             optimalRoute = elementaryRoutes.firstOrNull()
             for (route in elementaryRoutes.drop(1)) {
                 if (route.reducedCost <= optimalRoute!!.reducedCost - eps)
@@ -276,19 +277,37 @@ class PricingProblem(
 
         val edgeLength = graph.getEdgeWeight(forwardState.vertex, backwardState.vertex)
 
-        val newRoute = Route(
-            path = joinedPath,
-            score = forwardState.score + backwardState.score,
-            length = forwardState.length + edgeLength + backwardState.length,
-            reducedCost = reducedCost
-        )
 
-        // Updating the optimal route
-        if (optimalRoute == null || reducedCost <= optimalRoute!!.reducedCost - eps)
-            optimalRoute = newRoute
 
         if (!(forwardState.hasCycle || backwardState.hasCycle) && !forwardState.hasCommonGeneralVisits(backwardState)) {
+            // Path is elementary
+            val newRoute = Route(
+                path = joinedPath,
+                score = forwardState.score + backwardState.score,
+                length = forwardState.length + edgeLength + backwardState.length,
+                reducedCost = reducedCost,
+                isElementary = true
+            )
+
             elementaryRoutes.add(newRoute)
+
+            // Updating the optimal route
+            if (optimalRoute == null || reducedCost <= optimalRoute!!.reducedCost - eps)
+                optimalRoute = newRoute
+        }
+        else {
+            // Path is not elementary
+            val newRoute = Route(
+                path = joinedPath,
+                score = forwardState.score + backwardState.score,
+                length = forwardState.length + edgeLength + backwardState.length,
+                reducedCost = reducedCost,
+                isElementary = false
+            )
+
+            // Updating the optimal route
+            if (optimalRoute == null || reducedCost <= optimalRoute!!.reducedCost - eps)
+                optimalRoute = newRoute
         }
 
     }
