@@ -258,10 +258,6 @@ class PricingProblem(
      */
     private fun join(forwardState: State, backwardState: State) {
 
-        val t = mutableListOf<Int>()
-        t.addAll(forwardState.getPartialPath().asReversed())
-        t.addAll(backwardState.getPartialPath())
-
         // Checking if the join is feasible
         if (!isFeasibleJoin(forwardState, backwardState) || !halfway(forwardState, backwardState))
             return
@@ -291,9 +287,9 @@ class PricingProblem(
         if (optimalRoute == null || reducedCost <= optimalRoute!!.reducedCost - eps)
             optimalRoute = newRoute
 
-        // Checking if the new route is an elementary route
-        if (!hasCycle(joinedPath))
+        if (!(forwardState.hasCycle || backwardState.hasCycle) && !forwardState.hasCommonGeneralVisits(backwardState)) {
             elementaryRoutes.add(newRoute)
+        }
 
     }
 
@@ -311,16 +307,12 @@ class PricingProblem(
 
     }
 
-    /**
-     * Function that checks if joining a forward state with a backward state yields an elementary path with a length
-     * not exceeding the given budget.
-     */
     private fun isFeasibleJoin(forwardState: State, backwardState: State) : Boolean {
 
         val edgeLength = graph.getEdgeWeight(forwardState.vertex, backwardState.vertex)
         val joinedPathLength = forwardState.length + edgeLength + backwardState.length
 
-        return (!forwardState.hasCommonVisits(backwardState) && joinedPathLength <= budget)
+        return (!forwardState.hasCommonCriticalVisits(backwardState) && joinedPathLength <= budget)
 
     }
 
@@ -338,7 +330,7 @@ class PricingProblem(
             val newVertex = graph.getEdgeTarget(e)
 
             // Don't extend to critical vertices more than once
-            if (currentState.inPartialPath(newVertex, parameters))
+            if (currentState.usedCriticalVertex(newVertex, parameters))
                 continue
 
             // No 2-cycles
@@ -367,7 +359,7 @@ class PricingProblem(
             val newVertex = graph.getEdgeSource(e)
 
             // Don't extend to critical vertices more than once
-            if (currentState.inPartialPath(newVertex, parameters))
+            if (currentState.usedCriticalVertex(newVertex, parameters))
                 continue
 
             // No 2-cycles
@@ -392,7 +384,7 @@ class PricingProblem(
         val newPathLength = currentState.length + edgeLength
 
         // Checking if new path is elementary or if the path length exceeds the budget
-        if (currentState.inPartialPath(newVertex, parameters) || newPathLength > budget)
+        if (currentState.usedCriticalVertex(newVertex, parameters) || newPathLength > budget)
             return null
 
         // Extension is feasible
@@ -459,7 +451,7 @@ class PricingProblem(
                 val edgeLength = graph.getEdgeWeight(e)
 
                 if (isCritical[targetVertex] && state.length + edgeLength > budget)
-                    state.markUnreachable(targetVertex, parameters)
+                    state.markCriticalVertexUnreachable(targetVertex, parameters)
 
             }
         }
@@ -471,7 +463,7 @@ class PricingProblem(
                 val edgeLength = graph.getEdgeWeight(e)
 
                 if (isCritical[targetVertex] && state.length + edgeLength > budget)
-                    state.markUnreachable(targetVertex, parameters)
+                    state.markCriticalVertexUnreachable(targetVertex, parameters)
 
             }
         }
