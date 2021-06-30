@@ -19,7 +19,7 @@ class CliParser : CliktCommand() {
     val instanceName: String by option(
         "-n",
         help = "Instance file name with .txt extension"
-    ).default("p2.2.k.txt")
+    ).default("p1.2.k.txt")
 
     /**
      * File path for the folder containing the instance file.
@@ -27,7 +27,7 @@ class CliParser : CliktCommand() {
     val instancePath: String by option(
         "-p",
         help = "File path for the folder containing the instance file"
-    ).default("./data/Set_21_234/")
+    ).default("./data/Set_32_234/")
 
     /**
      * Path to the file with output KPIs
