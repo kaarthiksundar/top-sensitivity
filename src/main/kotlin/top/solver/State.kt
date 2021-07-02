@@ -135,15 +135,15 @@ class State private constructor (
         if (length <= otherState.length - parameters.eps)
             strict = true
 
-        // Checking the number of visited vertices is less than or equal to the number of visited vertices of other
-        if (numVisited > otherState.numVisited)
-            return false
-
-        if (numVisited < otherState.numVisited)
-            strict = true
-
         // Checking visited vertices
         for (i in visitedVertices.indices) {
+
+            // Checking the number of visited vertices is less than or equal to the number of visited vertices of other
+            if (numVisited > otherState.numVisited)
+                return false
+
+            if (numVisited < otherState.numVisited)
+                strict = true
 
             // Combining information from visited bits and unreachable bits
             val thisCombined = visitedVertices[i] or unreachableVertices[i]
