@@ -32,6 +32,7 @@ fun main(args: Array<String>) {
     log.info("LP Objective: ${cgs.lpObjective}")
     log.info("LP Solution: ${cgs.lpSolution}")
     log.info("Time Elapsed (seconds): ${t1 / 1000.0}")
+    log.info("Number of Columns: ${cgs.numRoutes}")
 }
 
 private fun parseArgs(args: Array<String>): Parameters {

@@ -52,6 +52,8 @@ class ColumnGenerationSolver(
      */
     var lpSolution = mutableListOf<Pair<Route, Double>>()
 
+    var numRoutes = 0
+
     /**
      * Solve master problem (linear relaxation for set cover model) using column generation.
      */
@@ -84,6 +86,7 @@ class ColumnGenerationSolver(
                 columnGenIteration++
             }
         }
+        numRoutes = routes.size
     }
 
     /**
