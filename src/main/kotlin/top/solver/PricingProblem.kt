@@ -133,9 +133,7 @@ class PricingProblem(
             return
 
         // Elementary path with negative reduced cost found. Storing it
-        val joinedPath = mutableListOf<Int>()
-        joinedPath.addAll(forwardState.getPartialPath().asReversed())
-        joinedPath.addAll(backwardState.getPartialPath())
+        val joinedPath = forwardState.getPartialPath().asReversed() + backwardState.getPartialPath()
 
         val edgeLength = graph.getEdgeWeight(forwardState.vertex, backwardState.vertex)
 
