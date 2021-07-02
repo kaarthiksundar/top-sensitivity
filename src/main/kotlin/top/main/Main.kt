@@ -7,6 +7,7 @@ import top.data.InstanceBuilder
 import top.data.Parameters
 import top.solver.ColumnGenerationSolver
 import top.solver.enumeratePaths
+import kotlin.system.measureTimeMillis
 
 private val log = KotlinLogging.logger {}
 
@@ -24,10 +25,13 @@ fun main(args: Array<String>) {
     val cplex = IloCplex()
     val cgs = ColumnGenerationSolver(instance, cplex, parameters)
 
-    cgs.solve()
+    val t1 = measureTimeMillis {
+        cgs.solve()
+    }
 
     log.info("LP Objective: ${cgs.lpObjective}")
     log.info("LP Solution: ${cgs.lpSolution}")
+    log.info("Time Elapsed (seconds): ${t1 / 1000.0}")
 }
 
 private fun parseArgs(args: Array<String>): Parameters {
