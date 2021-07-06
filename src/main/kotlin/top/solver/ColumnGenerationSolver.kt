@@ -1,5 +1,6 @@
 package top.solver
 
+import mu.KLogging
 import ilog.cplex.IloCplex
 import top.data.Instance
 import top.data.Parameters
@@ -59,8 +60,8 @@ class ColumnGenerationSolver(
         var columnGenIteration = 0
         while (true) {
 
-            println("Column Generation Iteration: $columnGenIteration")
-            println("Number of Routes: ${routes.size}")
+            logger.info("Column Generation Iteration: $columnGenIteration")
+            logger.info("Number of Routes: ${routes.size}")
 
             // Solving the restricted master problem
             solveRestrictedMasterProblem()
@@ -76,7 +77,7 @@ class ColumnGenerationSolver(
 
             if (newRoutes.isEmpty()) {
                 // No more columns to add. LP optimal solution has been found
-                println("LP Optimal Solution Found")
+                logger.info("LP Optimal Solution Found")
                 break
             } else {
                 // LP optimal solution still not found. Adding routes to set cover model
@@ -126,4 +127,6 @@ class ColumnGenerationSolver(
         }
         cplex.clearModel()
     }
+
+    companion object : KLogging()
 }

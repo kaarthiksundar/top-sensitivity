@@ -259,7 +259,6 @@ class PricingProblem(
         if (!(forwardState.hasCycle || backwardState.hasCycle) && !forwardState.hasCommonGeneralVisits(backwardState)) {
             // Path is elementary
             val newRoute = Route(
-                //path = joinedPath,
                 path = forwardState.getPartialPath().asReversed() + backwardState.getPartialPath(),
                 score = forwardState.score + backwardState.score,
                 length = getJoinedPathLength(forwardState, backwardState),
@@ -276,7 +275,6 @@ class PricingProblem(
         else {
             // Path is not elementary
             val newRoute = Route(
-                //path = joinedPath,
                 path = forwardState.getPartialPath().asReversed() + backwardState.getPartialPath(),
                 score = forwardState.score + backwardState.score,
                 length = getJoinedPathLength(forwardState, backwardState),
@@ -305,13 +303,20 @@ class PricingProblem(
 
     }
 
+    /**
+     * Function that checks if a join between a forward state and a backward state is feasible in the sense that the
+     * resulting path does not visit a critical vertex more than once and the joined path's length does not exceed
+     * the budget.
+     */
     private fun isFeasibleJoin(forwardState: State, backwardState: State) : Boolean {
-
         return (!forwardState.hasCommonCriticalVisits(backwardState) &&
                 getJoinedPathLength(forwardState, backwardState) <= budget)
-
     }
 
+    /**
+     * Function that returns the length of the resulting path from joining a given forward state and backward state. The
+     * feasibility of this join is not checked in this function.
+     */
     private fun getJoinedPathLength(forwardState: State, backwardState: State) : Double {
         return forwardState.length + backwardState.length + graph.getEdgeWeight(forwardState.vertex, backwardState.vertex)
     }
@@ -381,8 +386,7 @@ class PricingProblem(
     private fun extendIfFeasible(currentState: State, newVertex: Int, edgeLength: Double) : State? {
 
         // Checking if new path is elementary or if the path length exceeds the budget
-        if (currentState.usedCriticalVertex(newVertex, parameters) ||
-            currentState.length + edgeLength > budget)
+        if (currentState.length + edgeLength > budget)
             return null
 
         // Extension is feasible
@@ -410,7 +414,8 @@ class PricingProblem(
         updateUnreachableVertices(extension)
 
         // Iterating over the existing states in reversed order. Iterating backwards leads to large speed improvements
-        // when removing states in the list of existing non-dominated states
+        // when removing states in the list of existing non-dominated states since there is no concern of skipping
+        // an element after removing
         if (parameters.useDomination) {
             for (i in existingStates.indices.reversed()) {
                 if (existingStates[i].dominates(extension, parameters, useVisitCondition))
@@ -429,12 +434,12 @@ class PricingProblem(
             unprocessedForwardStates.add(extension)
         else
             unprocessedBackwardStates.add(extension)
-
     }
 
     /**
      * Function that identifies all vertices that are unreachable for a given state in the sense that the time the
-     * vehicle reaches such a vertex will exceed the given budget.
+     * vehicle reaches such a vertex after a single move will exceed the given budget. Since only a single move is
+     * considered, the edge lengths need not satisfy the triangle inequality for this to behave properly.
      */
     private fun updateUnreachableVertices(state: State) {
 
@@ -542,7 +547,6 @@ class PricingProblem(
 
             // Max number of elementary routes not yet found, so extend the state
             processState(state)
-
         }
     }
 
