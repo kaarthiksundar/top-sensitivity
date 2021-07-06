@@ -94,7 +94,7 @@ class PricingProblem(
             // Using the same duals (i.e., same previous RMP solution), but the critical vertex set is modified
             logger.debug("Starting search iteration $searchIteration")
 
-            // Clearing the forward/backward lists
+            // Clearing the forward/backward lists and updating critical vertex set
             initializeIteration()
 
             // With the current critical vertex set, find all admissible elementary routes
@@ -134,8 +134,8 @@ class PricingProblem(
     }
 
     /**
-     * Function that updates the critical vertex set and resets the lists of non-dominated states and unprocessed
-     * states
+     * Function that updates the critical vertex set and resets the lists of non-dominated states. The optimal route
+     * (not necessarily elementary) is also updated using the best-cached elementary route.
      */
     private fun initializeIteration() {
         // Updating the critical vertices
@@ -254,19 +254,16 @@ class PricingProblem(
         if (reducedCost >= - eps)
             return
 
-        // Elementary path with negative reduced cost found. Storing it
-        val joinedPath = forwardState.getPartialPath().asReversed() + backwardState.getPartialPath()
-
-        val edgeLength = graph.getEdgeWeight(forwardState.vertex, backwardState.vertex)
-
-
+        // Admissible elementary route found
+        //val joinedPath = forwardState.getPartialPath().asReversed() + backwardState.getPartialPath()
 
         if (!(forwardState.hasCycle || backwardState.hasCycle) && !forwardState.hasCommonGeneralVisits(backwardState)) {
             // Path is elementary
             val newRoute = Route(
-                path = joinedPath,
+                //path = joinedPath,
+                path = forwardState.getPartialPath().asReversed() + backwardState.getPartialPath(),
                 score = forwardState.score + backwardState.score,
-                length = forwardState.length + edgeLength + backwardState.length,
+                length = getJoinedPathLength(forwardState, backwardState),
                 reducedCost = reducedCost,
                 isElementary = true
             )
@@ -280,9 +277,10 @@ class PricingProblem(
         else {
             // Path is not elementary
             val newRoute = Route(
-                path = joinedPath,
+                //path = joinedPath,
+                path = forwardState.getPartialPath().asReversed() + backwardState.getPartialPath(),
                 score = forwardState.score + backwardState.score,
-                length = forwardState.length + edgeLength + backwardState.length,
+                length = getJoinedPathLength(forwardState, backwardState),
                 reducedCost = reducedCost,
                 isElementary = false
             )
@@ -310,11 +308,13 @@ class PricingProblem(
 
     private fun isFeasibleJoin(forwardState: State, backwardState: State) : Boolean {
 
-        val edgeLength = graph.getEdgeWeight(forwardState.vertex, backwardState.vertex)
-        val joinedPathLength = forwardState.length + edgeLength + backwardState.length
+        return (!forwardState.hasCommonCriticalVisits(backwardState) &&
+                getJoinedPathLength(forwardState, backwardState) <= budget)
 
-        return (!forwardState.hasCommonCriticalVisits(backwardState) && joinedPathLength <= budget)
+    }
 
+    private fun getJoinedPathLength(forwardState: State, backwardState: State) : Double {
+        return forwardState.length + backwardState.length + graph.getEdgeWeight(forwardState.vertex, backwardState.vertex)
     }
 
     /**
