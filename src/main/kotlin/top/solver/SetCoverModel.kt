@@ -103,6 +103,12 @@ class SetCoverModel(private var cplex: IloCplex) {
         val routeExpression: IloLinearNumExpr = cplex.linearNumExpr()
 
         /**
+         * Auxiliary variable used to detect if a problem is infeasible
+         */
+        auxiliaryVariable = cplex.numVar(0.0, Double.MAX_VALUE, IloNumVarType.Float)
+
+
+        /**
          *   List of routes.
          *
          *   The i-th entry corresponds to vertex v_i and the associated MutableList at
@@ -152,6 +158,7 @@ class SetCoverModel(private var cplex: IloCplex) {
         /**
          *  SETTING THE OBJECTIVE
          */
+        objectiveExpression.addTerm(-100000.0, auxiliaryVariable)
         cplex.addMaximize(objectiveExpression)
 
         /**
