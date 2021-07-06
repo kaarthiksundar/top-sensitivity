@@ -171,19 +171,6 @@ class PricingProblem(
     }
 
     /**
-     * Function that checks if a given path has a cycle.
-     */
-    private fun hasCycle(path: List<Int>) : Boolean {
-        val visited = hashSetOf<Int>()
-        for (vertex in path) {
-            if (visited.contains(vertex))
-                return true
-            visited.add(vertex)
-        }
-        return false
-    }
-
-    /**
      * Function that identifies which vertices in the optimal path (not necessarily elementary) were visited multiple
      * times and marks these vertices as critical vertices for the next iteration of DSSR.
      */
