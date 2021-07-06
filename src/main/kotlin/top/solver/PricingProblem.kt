@@ -152,9 +152,6 @@ class PricingProblem(
             nonDominatedBackwardStates[i].clear()
         }
 
-        unprocessedForwardStates.clear()
-        unprocessedBackwardStates.clear()
-
         // Remaking initial states at source and destination
         nonDominatedForwardStates[source].add(State.buildTerminalState(isForward = true, vertex = source, numVertices = numVertices, parameters))
         nonDominatedBackwardStates[destination].add(State.buildTerminalState(isForward = false, vertex = destination, numVertices = numVertices, parameters))
@@ -510,9 +507,7 @@ class PricingProblem(
      */
     private fun interleavedSearch() {
 
-        // Initializing the forward and backward states at the terminal vertices
-        //unprocessedForwardStates.add(State.buildTerminalState(isForward = true, vertex = source, numVertices = numVertices, parameters))
-        //unprocessedBackwardStates.add(State.buildTerminalState(isForward = false, vertex = destination, numVertices = numVertices, parameters))
+        // Finding initial set of unprocessed states from the terminal states
         extendForward(State.buildTerminalState(isForward = true, vertex = source, numVertices = numVertices, parameters))
         extendBackward(State.buildTerminalState(isForward = false, vertex = destination, numVertices = numVertices, parameters))
 
