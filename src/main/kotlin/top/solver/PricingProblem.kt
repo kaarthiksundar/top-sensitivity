@@ -327,7 +327,6 @@ class PricingProblem(
 
         // Iterating over all possible extensions to neighboring vertices
         for (e in graph.outgoingEdgesOf(currentVertex)) {
-            val edgeLength = graph.getEdgeWeight(e)
             val newVertex = graph.getEdgeTarget(e)
 
             // Don't extend to critical vertices more than once
@@ -339,6 +338,7 @@ class PricingProblem(
                 continue
 
             // Checking if an extension is feasible
+            val edgeLength = graph.getEdgeWeight(e)
             val extension = extendIfFeasible(currentState, newVertex, edgeLength) ?: continue
 
             // Extension is feasible. Update unprocessed forward states
@@ -356,7 +356,6 @@ class PricingProblem(
 
         // Iterating over all possible extensions using incoming edges
         for (e in graph.incomingEdgesOf(currentVertex)) {
-            val edgeLength = graph.getEdgeWeight(e)
             val newVertex = graph.getEdgeSource(e)
 
             // Don't extend to critical vertices more than once
@@ -368,6 +367,7 @@ class PricingProblem(
                 continue
 
             // Checking if an extension is feasible
+            val edgeLength = graph.getEdgeWeight(e)
             val extension = extendIfFeasible(currentState, newVertex, edgeLength) ?: continue
 
             // Extension is feasible. Update unprocessed backward states
@@ -381,25 +381,21 @@ class PricingProblem(
      */
     private fun extendIfFeasible(currentState: State, newVertex: Int, edgeLength: Double) : State? {
 
-        // Length of partial path after extension
-        val newPathLength = currentState.length + edgeLength
-
         // Checking if new path is elementary or if the path length exceeds the budget
-        if (currentState.usedCriticalVertex(newVertex, parameters) || newPathLength > budget)
+        if (currentState.usedCriticalVertex(newVertex, parameters) ||
+            currentState.length + edgeLength > budget)
             return null
 
         // Extension is feasible
-        var edgeCost = vertexReducedCosts[newVertex]
-        edgeCost +=
-            if (currentState.isForward) {edgeDuals[currentState.vertex][newVertex]}
-            else {edgeDuals[newVertex][currentState.vertex]}
-        val newVertexScore = instance.scores[newVertex]
+        val edgeCost =
+            if (currentState.isForward) vertexReducedCosts[newVertex] + edgeDuals[currentState.vertex][newVertex]
+            else vertexReducedCosts[newVertex] + edgeDuals[newVertex][currentState.vertex]
 
         return currentState.extend(
             newVertex = newVertex,
             edgeCost = edgeCost,
             edgeLength = edgeLength,
-            newVertexScore = newVertexScore,
+            newVertexScore = instance.scores[newVertex],
             isCritical = isCritical[newVertex],
             parameters = parameters
         )
