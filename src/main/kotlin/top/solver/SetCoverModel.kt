@@ -209,6 +209,44 @@ class SetCoverModel(private var cplex: IloCplex) {
         /**
          * CONSTRAINT (3) ALREADY HANDLED IN CREATION OF THE ROUTE VARIABLES.
          */
+
+        /**
+         * Additional constraints for must visit vertices.
+         */
+        mustVisitVertices.forEach {
+            val expr : IloLinearNumExpr = cplex.linearNumExpr()
+            vertexRoutes[it].forEach {
+                it1 -> expr.addTerm(1.0, routeVariable[it1])
+            }
+            expr.addTerm(1.0, auxiliaryVariable)
+            mustVisitVertexConstraintId[it] = constraints.size
+            constraints.add(cplex.addGe(expr, 1.0, "must_visit_target_$it"))
+        }
+
+        /**
+         * Additional constraints for must use edges.
+         */
+
+        // Finding which routes in the set cover model use each edge
+        val edgeRoutes = mustVisitEdges.map { it to mutableListOf<Int>()}.toMap()
+        mustVisitEdges.forEach {
+            for (i in routes.indices) {
+                if (it in routes[i].path.zipWithNext())
+                    edgeRoutes.getValue(it).add(i)
+            }
+        }
+
+        // Making the constraints
+        mustVisitEdges.forEach{
+            val expr: IloLinearNumExpr = cplex.linearNumExpr()
+            edgeRoutes.getValue(it).forEach{
+                it1 -> expr.addTerm(1.0, routeVariable[it1])
+            }
+            expr.addTerm(1.0, auxiliaryVariable)
+            mustVisitEdgeConstraintId[it] = constraints.size
+            constraints.add(cplex.addGe(expr, 1.0, "must_visit_edge_${it.first}_${it.second}"))
+        }
+
     }
 
     /**
