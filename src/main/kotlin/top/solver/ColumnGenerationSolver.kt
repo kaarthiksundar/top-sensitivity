@@ -54,6 +54,18 @@ class ColumnGenerationSolver(
     var lpObjective = 0.0
         private set
 
+    var lpOptimal = false
+        private set
+
+    var lpInfeasible = true
+        private set
+
+    var mipObjective = 0.0
+        private set
+
+    var mipSolution = listOf<Route>()
+        private set
+
     /**
      * List of pairs of Route objects and the corresponding value of the route variable for the
      * linear relaxation of the set cover model.
@@ -87,6 +99,7 @@ class ColumnGenerationSolver(
             if (newRoutes.isEmpty()) {
                 // No more columns to add. LP optimal solution has been found
                 logger.info("LP Optimal Solution Found")
+                lpOptimal = true
                 break
             } else {
                 // LP optimal solution still not found. Adding routes to set cover model
@@ -94,49 +107,72 @@ class ColumnGenerationSolver(
                 columnGenIteration++
             }
         }
+        // If the LP is feasible, solve the MIP in order to get a better lower bound
+        if (!lpInfeasible)
+            solveRestrictedMasterProblem(asMIP = true)
     }
 
     /**
      * Solve restricted master problem (linear relaxation of the set cover model using a subset
      * of all feasible routes).
      */
-    private fun solveRestrictedMasterProblem() {
+    private fun solveRestrictedMasterProblem(asMIP : Boolean = false) {
         // Creating the restricted master problem and solving
         val setCoverModel = SetCoverModel(cplex)
         setCoverModel.createModel(
             instance = instance,
             routes = routes,
+            asMIP = asMIP,
             mustVisitVertices = mustVisitVertices,
             mustVisitEdges = mustVisitEdges)
         setCoverModel.solve()
 
-        // Collect dual variable corresponding to the number of vehicles constraint.
-        vehicleCoverDual = setCoverModel.getRouteDual()
+        if (asMIP) {
 
-        // Collect reduced costs of each vertex given the dual and prizes.
-        val vertexDuals = setCoverModel.getVertexDuals()
-        for (i in 0 until instance.numVertices) {
-            vertexReducedCosts[i] = vertexDuals[i] - instance.scores[i]
-        }
-
-        // Updating the reduced costs by duals for enforced vertices
-        for ((vertex, dual) in setCoverModel.getMustVisitVertexDuals()) {
-            vertexReducedCosts[vertex] += dual
-        }
-
-        // Storing duals of enforced edges. Used in the pricing problem
-        edgeDuals.forEach{it.fill(0.0)} // Resetting
-        for ((edge, dual) in setCoverModel.getMustVisitEdgeDuals())
-            edgeDuals[edge.first][edge.second] = dual
-
-        // Update LP solution values.
-        lpObjective = setCoverModel.objective
-        lpSolution.clear()
-        val setCoverSolution = setCoverModel.getSolution()
-        for (i in setCoverSolution.indices) {
-            if (setCoverSolution[i] >= parameters.eps) {
-                lpSolution.add(Pair(routes[i], setCoverSolution[i]))
+            // Collecting the MIP solution
+            mipObjective = setCoverModel.objective
+            logger.debug("MIP Objective: $mipObjective")
+            val setCoverSolution = setCoverModel.getSolution()
+            val selectedRoutes = mutableListOf<Route>()
+            for (i in setCoverSolution.indices) {
+                // Checking if the value is effectively non-zero
+                if (setCoverSolution[i] >= parameters.eps)
+                    selectedRoutes.add(routes[i])
             }
+            mipSolution = selectedRoutes
+        }
+        else {
+            // Collect dual variable corresponding to the number of vehicles constraint.
+            vehicleCoverDual = setCoverModel.getRouteDual()
+
+            // Collect reduced costs of each vertex given the dual and prizes.
+            val vertexDuals = setCoverModel.getVertexDuals()
+            for (i in 0 until instance.numVertices) {
+                vertexReducedCosts[i] = vertexDuals[i] - instance.scores[i]
+            }
+
+            // Updating the reduced costs by duals for enforced vertices
+            for ((vertex, dual) in setCoverModel.getMustVisitVertexDuals()) {
+                vertexReducedCosts[vertex] += dual
+            }
+
+            // Storing duals of enforced edges. Used in the pricing problem
+            edgeDuals.forEach { it.fill(0.0) } // Resetting
+            for ((edge, dual) in setCoverModel.getMustVisitEdgeDuals())
+                edgeDuals[edge.first][edge.second] = dual
+
+            // Update LP solution values.
+            lpObjective = setCoverModel.objective
+            lpSolution.clear()
+            val setCoverSolution = setCoverModel.getSolution()
+            for (i in setCoverSolution.indices) {
+                if (setCoverSolution[i] >= parameters.eps) {
+                    lpSolution.add(Pair(routes[i], setCoverSolution[i]))
+                }
+            }
+
+            // Checking if the LP is infeasible by examining the value of the auxiliary variable
+            lpInfeasible = setCoverModel.getAuxiliaryVariableSolution() >= parameters.eps
         }
         cplex.clearModel()
     }
