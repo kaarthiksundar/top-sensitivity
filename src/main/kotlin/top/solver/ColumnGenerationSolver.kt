@@ -66,6 +66,9 @@ class ColumnGenerationSolver(
     var mipSolution = listOf<Route>()
         private set
 
+    var lpIntegral = false
+        private set
+
     /**
      * List of pairs of Route objects and the corresponding value of the route variable for the
      * linear relaxation of the set cover model.
@@ -110,6 +113,15 @@ class ColumnGenerationSolver(
         // If the LP is feasible, solve the MIP in order to get a better lower bound
         if (!lpInfeasible)
             solveRestrictedMasterProblem(asMIP = true)
+
+        // Checking if the LP's solution is integer-valued
+        lpIntegral = true
+        for (sol in lpSolution) {
+            if (sol.second >= parameters.eps && 1 - sol.second >= parameters.eps) {
+                lpIntegral = false
+                break
+            }
+        }
     }
 
     /**
