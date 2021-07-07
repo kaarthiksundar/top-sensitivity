@@ -5,6 +5,9 @@ import ilog.cplex.IloCplex
 import top.data.Instance
 import top.data.Parameters
 import top.data.Route
+import top.main.SetGraph
+import top.main.TOPException
+import top.main.getCopy
 
 
 /**
@@ -62,6 +65,7 @@ class ColumnGenerationSolver(
      */
     fun solve() {
         var columnGenIteration = 0
+        val reducedGraph = generateReducedGraph()
         while (true) {
 
             logger.info("Column Generation Iteration: $columnGenIteration")
@@ -73,6 +77,7 @@ class ColumnGenerationSolver(
             // Solving the pricing problem to generate columns to add to the restricted master problem
             val newRoutes = PricingProblem(
                 instance,
+                reducedGraph,
                 vehicleCoverDual,
                 vertexReducedCosts,
                 edgeDuals,
@@ -134,6 +139,32 @@ class ColumnGenerationSolver(
             }
         }
         cplex.clearModel()
+    }
+
+    private fun generateReducedGraph() : SetGraph {
+        val reducedGraph = instance.graph.getCopy()
+
+        // Removing forbidden vertices (removes incident edges as well)
+        for (vertex in forbiddenVertices) {
+
+            // Checking the vertex exists. If so, remove.
+            if (reducedGraph.containsVertex(vertex))
+                reducedGraph.removeVertex(vertex)
+            else
+                throw TOPException("Attempting to remove non-existent vertex from graph")
+        }
+
+        // Removing forbidden edges
+        for (edge in forbiddenEdges) {
+
+            // Checking the edge exists. If so, remove.
+            if (reducedGraph.containsEdge(edge.first, edge.second))
+                reducedGraph.removeEdge(edge.first, edge.second)
+            else
+                throw TOPException("Attempting to remove non-existent edge from graph")
+        }
+
+        return reducedGraph
     }
 
     companion object : KLogging()

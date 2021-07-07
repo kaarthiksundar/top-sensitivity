@@ -7,6 +7,7 @@ import top.main.getEdgeWeight
 import java.util.*
 import kotlin.math.absoluteValue
 import mu.KLogging
+import top.main.SetGraph
 import top.main.TOPException
 
 /**
@@ -19,6 +20,10 @@ class PricingProblem(
      * Object with all routing problem data.
      */
     private val instance: Instance,
+    /**
+     * Graph with forbidden vertices/edges removed.
+     */
+    private val reducedGraph: SetGraph,
     /**
      * Dual variable associated with the constraint that at most m vehicles are used.
      */
@@ -45,11 +50,6 @@ class PricingProblem(
      * generation scheme.
      */
     private val elementaryRoutes = mutableListOf<Route>()
-
-    /**
-     * Graph the pricing problem is defined on for the current node
-     */
-    private val graph = instance.graph
 
     /**
      * Tolerance used for comparing doubles
@@ -251,9 +251,9 @@ class PricingProblem(
 
         // Joining forward state with all non-dominated backward states
         if (currentState.isForward) {
-            for (e in graph.outgoingEdgesOf(currentVertex)) {
+            for (e in reducedGraph.outgoingEdgesOf(currentVertex)) {
 
-                val nextVertex = graph.getEdgeTarget(e)
+                val nextVertex = reducedGraph.getEdgeTarget(e)
 
                 for (backwardState in nonDominatedBackwardStates[nextVertex]) {
 
@@ -268,9 +268,9 @@ class PricingProblem(
             }
         }
         else { // Joining backward state with all non-dominated forward states
-            for (e in graph.incomingEdgesOf(currentVertex)) {
+            for (e in reducedGraph.incomingEdgesOf(currentVertex)) {
 
-                val previousVertex = graph.getEdgeSource(e)
+                val previousVertex = reducedGraph.getEdgeSource(e)
 
                 for (forwardState in nonDominatedForwardStates[previousVertex]) {
 
@@ -366,7 +366,7 @@ class PricingProblem(
      * feasibility of this join is not checked in this function.
      */
     private fun getJoinedPathLength(forwardState: State, backwardState: State) : Double {
-        return forwardState.length + backwardState.length + graph.getEdgeWeight(forwardState.vertex, backwardState.vertex)
+        return forwardState.length + backwardState.length + reducedGraph.getEdgeWeight(forwardState.vertex, backwardState.vertex)
     }
 
     /**
@@ -378,8 +378,8 @@ class PricingProblem(
         val currentVertex = currentState.vertex
 
         // Iterating over all possible extensions to neighboring vertices
-        for (e in graph.outgoingEdgesOf(currentVertex)) {
-            val newVertex = graph.getEdgeTarget(e)
+        for (e in reducedGraph.outgoingEdgesOf(currentVertex)) {
+            val newVertex = reducedGraph.getEdgeTarget(e)
 
             // Don't extend to critical vertices more than once
             if (currentState.usedCriticalVertex(newVertex, parameters))
@@ -390,7 +390,7 @@ class PricingProblem(
                 continue
 
             // Checking if an extension is feasible
-            val edgeLength = graph.getEdgeWeight(e)
+            val edgeLength = reducedGraph.getEdgeWeight(e)
             val extension = extendIfFeasible(currentState, newVertex, edgeLength) ?: continue
 
             // Extension is feasible. Update unprocessed forward states
@@ -407,8 +407,8 @@ class PricingProblem(
         val currentVertex = currentState.vertex
 
         // Iterating over all possible extensions using incoming edges
-        for (e in graph.incomingEdgesOf(currentVertex)) {
-            val newVertex = graph.getEdgeSource(e)
+        for (e in reducedGraph.incomingEdgesOf(currentVertex)) {
+            val newVertex = reducedGraph.getEdgeSource(e)
 
             // Don't extend to critical vertices more than once
             if (currentState.usedCriticalVertex(newVertex, parameters))
@@ -419,7 +419,7 @@ class PricingProblem(
                 continue
 
             // Checking if an extension is feasible
-            val edgeLength = graph.getEdgeWeight(e)
+            val edgeLength = reducedGraph.getEdgeWeight(e)
             val extension = extendIfFeasible(currentState, newVertex, edgeLength) ?: continue
 
             // Extension is feasible. Update unprocessed backward states
@@ -496,10 +496,10 @@ class PricingProblem(
         val currentVertex = state.vertex
 
         if (state.isForward) {
-            for (e in graph.outgoingEdgesOf(currentVertex)) {
+            for (e in reducedGraph.outgoingEdgesOf(currentVertex)) {
 
-                val targetVertex = graph.getEdgeTarget(e)
-                val edgeLength = graph.getEdgeWeight(e)
+                val targetVertex = reducedGraph.getEdgeTarget(e)
+                val edgeLength = reducedGraph.getEdgeWeight(e)
 
                 if (isCritical[targetVertex] && state.length + edgeLength > budget)
                     state.markCriticalVertexUnreachable(targetVertex, parameters)
@@ -508,10 +508,10 @@ class PricingProblem(
         }
         else
         {
-            for (e in graph.incomingEdgesOf(currentVertex)) {
+            for (e in reducedGraph.incomingEdgesOf(currentVertex)) {
 
-                val targetVertex = graph.getEdgeSource(e)
-                val edgeLength = graph.getEdgeWeight(e)
+                val targetVertex = reducedGraph.getEdgeSource(e)
+                val edgeLength = reducedGraph.getEdgeWeight(e)
 
                 if (isCritical[targetVertex] && state.length + edgeLength > budget)
                     state.markCriticalVertexUnreachable(targetVertex, parameters)
@@ -532,7 +532,7 @@ class PricingProblem(
         if (currDiff <= eps)
             return true
 
-        val edgeLength = graph.getEdgeWeight(forwardState.vertex, backwardState.vertex)
+        val edgeLength = reducedGraph.getEdgeWeight(forwardState.vertex, backwardState.vertex)
         var otherDiff = 0.0
 
         if (forwardState.length <= backwardState.length - eps) {
