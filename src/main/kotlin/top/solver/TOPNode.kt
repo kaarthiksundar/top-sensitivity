@@ -1,6 +1,7 @@
 package top.solver
 
 import branchandbound.api.INode
+import top.data.Route
 
 data class TOPNode(
     override val id: Long,
@@ -11,7 +12,8 @@ data class TOPNode(
     val mustVisitVertices : IntArray = intArrayOf(),
     val mustVisitEdges : List<Pair<Int, Int>> = listOf(),
     val forbiddenVertices : IntArray = intArrayOf(),
-    val forbiddenEdges : List<Pair<Int, Int>> = listOf()
+    val forbiddenEdges : List<Pair<Int, Int>> = listOf(),
+    val lpSolution : List<Pair<Route, Double>> = listOf()
 ) : INode {
 
     override val mipObjective : Double? = null

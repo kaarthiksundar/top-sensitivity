@@ -52,7 +52,8 @@ class TOPSolver(
             mustVisitVertices = unsolvedNode.mustVisitVertices,
             mustVisitEdges = unsolvedNode.mustVisitEdges,
             forbiddenVertices = unsolvedNode.forbiddenVertices,
-            forbiddenEdges = unsolvedNode.forbiddenEdges
+            forbiddenEdges = unsolvedNode.forbiddenEdges,
+            lpSolution = cgs.lpSolution
         )
     }
 }
