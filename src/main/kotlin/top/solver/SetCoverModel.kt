@@ -272,6 +272,13 @@ class SetCoverModel(private var cplex: IloCplex) {
     }
 
     /**
+     * Function that returns the value of the auxiliary variable used to determine if the LP is infeasible.
+     */
+    fun getAuxiliaryVariableSolution() : Double {
+        return cplex.getValue(auxiliaryVariable)
+    }
+
+    /**
      * Function that returns the dual of the fleet size constraint
      */
     fun getRouteDual(): Double = cplex.getDual(constraints[routeConstraintId])
