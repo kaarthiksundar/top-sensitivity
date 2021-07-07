@@ -40,50 +40,99 @@ class PricingProblem(
 
 
 ) {
+    /**
+     * List of [Route] objects containing admissible elementary routes to be added to the set cover model in the column
+     * generation scheme.
+     */
     private val elementaryRoutes = mutableListOf<Route>()
 
+    /**
+     * Graph the pricing problem is defined on for the current node
+     */
     private val graph = instance.graph
 
+    /**
+     * Tolerance used for comparing doubles
+     */
     private val eps = parameters.eps
 
+    /**
+     * Number of vertices in the pricing problem is defined on for the current node
+     */
     private val numVertices = instance.numVertices
 
+    /**
+     * Source vertex ID
+     */
+    private val source = instance.source
+
+    /**
+     * Destination vertex ID
+     */
+    private val destination = instance.destination
+
+    /**
+     * Maximum length for feasible paths
+     */
+    private val budget = instance.budget
+
+    /**
+     * Maximum number of elementary routes generated when solving the pricing problem
+     */
     private val maxColumnsAdded = parameters.maxColumnsAdded
 
+    /**
+     * Priority Queue of forward states to be joined with non-dominated backward states and extended
+     */
     private var unprocessedForwardStates = PriorityQueue<State>()
+
+    /**
+     * Priority Queue of backward states to be joined with non-dominated forward states and extended
+     */
     private var unprocessedBackwardStates = PriorityQueue<State>()
 
+    /**
+     * List of lists of non-dominated forward states indexed by the vertex ID
+     */
     private val nonDominatedForwardStates = List(numVertices) { mutableListOf<State>()}
+
+    /**
+     * List of lists of non-dominated backward states indexed by the vertex ID
+     */
     private val nonDominatedBackwardStates = List(numVertices) { mutableListOf<State>()}
 
+    /**
+     * Current optimal route (not necessarily elementary) found
+     */
     private var optimalRoute: Route? = null
 
+    /**
+     * Boolean Array indicating which vertices have been visited multiple times in the optimal solution found
+     */
     private val isVisitedMultipleTimes = BooleanArray(numVertices) {false}
+
+    /**
+     * Boolean Array indicating which vertices are considered to be critical vertices and are therefore to be only
+     * visited at most once
+     */
     private val isCritical = BooleanArray(numVertices) {false}
 
     /**
-     * Solve the pricing problem (elementary shortest path problem with resource constraints)
-     *
-     * Given the dual variables and budget, we wish to find elementary shortest paths from the
-     * source to the destination with a path length less than the budget and a negative
-     * accumulated cost.
-     *
-     * This will be done using a standard labeling algorithm. This procedure could be improved
-     * by including domination rules and other acceleration techniques
-     * (such as unreachable nodes).
-     *
-     * @return routes to be added to the restricted master problem in the column generation scheme
+     * Flag used to check if I-DSSR is to be exited and new duals are to be found.
      */
-
-    private val source = instance.source
-    private val destination = instance.destination
-    private val budget = instance.budget
-
     private var stopSearch = false
+
+    /**
+     * Flag used to allow for a relaxed domination condition. False when the relaxation is used, true when the
+     * standard domination conditions are used.
+     */
     private var useVisitCondition = false
 
     /**
      * Function that performs I-DSSR to find elementary routes to add to the set cover model formulation in the RMP.
+     *
+     * @return List of [Route] objects containing admissible elementary routes to be added to the set cover model in the
+     * column generation scheme.
      */
     fun generateColumns(): List<Route> {
 
@@ -157,7 +206,6 @@ class PricingProblem(
         nonDominatedBackwardStates[destination].add(State.buildTerminalState(isForward = false, vertex = destination, numVertices = numVertices, parameters))
 
         // Update optimal route with best cached elementary route
-        //if (optimalRoute != null && hasCycle(optimalRoute!!.path)) {
         if (optimalRoute != null && !optimalRoute!!.isElementary) {
             optimalRoute = elementaryRoutes.firstOrNull()
             for (route in elementaryRoutes.drop(1)) {
@@ -382,10 +430,12 @@ class PricingProblem(
     /**
      * Function that performs an extension (either forward or backward) if it is feasible in the sense no critical
      * vertex is visited more than once and the budget is not exceeded.
+     *
+     * @return [State] resulting from a feasible extension or Null otherwise
      */
     private fun extendIfFeasible(currentState: State, newVertex: Int, edgeLength: Double) : State? {
 
-        // Checking if new path is elementary or if the path length exceeds the budget
+        // Checking if the path length exceeds the budget
         if (currentState.length + edgeLength > budget)
             return null
 
@@ -473,6 +523,8 @@ class PricingProblem(
 
     /**
      * Function that checks if two states satisfy the halfway condition.
+     *
+     * @return True if the halfway condition is satisfied and false otherwise
      */
     private fun halfway(forwardState: State, backwardState: State) : Boolean {
 
