@@ -1,13 +1,24 @@
 package top.solver
 
 import branchandbound.api.INode
+import ilog.cplex.IloCplex
+import top.data.Instance
+import top.data.Parameters
 
 data class TOPNode(
     override val id: Long,
     override val parentLpObjective: Double = Double.MAX_VALUE,
     override val lpFeasible: Boolean = false,
     override val lpIntegral: Boolean = false,
-    override val lpObjective: Double = 0.0
+    override val lpObjective: Double = 0.0,
+    val mustVisitVertices : IntArray = intArrayOf(),
+    val mustVisitEdges : List<Pair<Int, Int>> = listOf(),
+    val forbiddenVertices : IntArray = intArrayOf(),
+    val forbiddenEdges : List<Pair<Int, Int>> = listOf(),
+    val instance : Instance,
+    val cplex : IloCplex,
+    val parameters : Parameters
+
 ) : INode {
 
     override val mipObjective : Double? = null
