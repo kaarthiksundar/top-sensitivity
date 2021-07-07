@@ -19,7 +19,11 @@ import top.data.Route
 class ColumnGenerationSolver(
     private val instance: Instance,
     private val cplex: IloCplex,
-    private val parameters: Parameters
+    private val parameters: Parameters,
+    private val mustVisitVertices : IntArray = intArrayOf(),
+    private val mustVisitEdges : List<Pair<Int, Int>> = listOf(),
+    private val forbiddenVertices : IntArray = intArrayOf(),
+    private val forbiddenEdges : List<Pair<Int, Int>> = listOf()
 ) {
     /**
      * Routes to use in the set cover model
@@ -94,7 +98,11 @@ class ColumnGenerationSolver(
     private fun solveRestrictedMasterProblem() {
         // Creating the restricted master problem and solving
         val setCoverModel = SetCoverModel(cplex)
-        setCoverModel.createModel(instance, routes)
+        setCoverModel.createModel(
+            instance = instance,
+            routes = routes,
+            mustVisitVertices = mustVisitVertices,
+            mustVisitEdges = mustVisitEdges)
         setCoverModel.solve()
 
         // Collect dual variable corresponding to the number of vehicles constraint.
