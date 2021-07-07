@@ -1,7 +1,6 @@
 package top.solver
 
 import branchandbound.api.INode
-import ilog.cplex.IloCplex
 
 data class TOPNode(
     override val id: Long,
@@ -12,8 +11,7 @@ data class TOPNode(
     val mustVisitVertices : IntArray = intArrayOf(),
     val mustVisitEdges : List<Pair<Int, Int>> = listOf(),
     val forbiddenVertices : IntArray = intArrayOf(),
-    val forbiddenEdges : List<Pair<Int, Int>> = listOf(),
-    val cplex : IloCplex
+    val forbiddenEdges : List<Pair<Int, Int>> = listOf()
 ) : INode {
 
     override val mipObjective : Double? = null
