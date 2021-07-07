@@ -41,7 +41,8 @@ class ColumnGenerationSolver(
     /**
      * List of reduced costs from the dual values of the linear relaxation of the set cover model
      */
-    private var vertexReducedCosts = MutableList(instance.numVertices) { 0.0 }
+    var vertexReducedCosts = MutableList(instance.numVertices) { 0.0 }
+        private set
 
     /**
      * 2D List of duals for enforced edges. 0.0 by default.

@@ -13,7 +13,8 @@ data class TOPNode(
     val mustVisitEdges : List<Pair<Int, Int>> = listOf(),
     val forbiddenVertices : IntArray = intArrayOf(),
     val forbiddenEdges : List<Pair<Int, Int>> = listOf(),
-    val lpSolution : List<Pair<Route, Double>> = listOf()
+    val lpSolution : List<Pair<Route, Double>> = listOf(),
+    val vertexReducedCosts : List<Double>? = null
 ) : INode {
 
     override val mipObjective : Double? = null
