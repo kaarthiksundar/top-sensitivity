@@ -103,6 +103,7 @@ class ColumnGenerationSolver(
             if (newRoutes.isEmpty()) {
                 // No more columns to add. LP optimal solution has been found
                 logger.info("LP Optimal Solution Found")
+                logger.info("LP Objective: $lpObjective")
                 lpOptimal = true
                 break
             } else {
@@ -199,18 +200,18 @@ class ColumnGenerationSolver(
             // Checking the vertex exists. If so, remove.
             if (reducedGraph.containsVertex(vertex))
                 reducedGraph.removeVertex(vertex)
-            else
-                throw TOPException("Attempting to remove non-existent vertex from graph")
+            else if (!instance.graph.containsVertex(vertex))
+                throw TOPException("Attempting to remove non-existent vertex $vertex from graph")
         }
 
         // Removing forbidden edges
         for (edge in forbiddenEdges) {
-
             // Checking the edge exists. If so, remove.
             if (reducedGraph.containsEdge(edge.first, edge.second))
                 reducedGraph.removeEdge(edge.first, edge.second)
-            else
-                throw TOPException("Attempting to remove non-existent edge from graph")
+            else if (!instance.graph.containsEdge(edge.first, edge.second))
+                throw TOPException("Attempting to remove non-existent arc $edge from graph")
+
         }
 
         return reducedGraph
