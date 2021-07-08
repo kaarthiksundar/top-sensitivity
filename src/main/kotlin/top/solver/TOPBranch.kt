@@ -1,5 +1,6 @@
 package top.solver
 
+import top.data.Instance
 import top.main.TOPException
 
 /**
@@ -32,7 +33,7 @@ import top.main.TOPException
  *
  * The master problem is automatically updated when branching.
  */
-fun TOPBranch(solvedNode: TOPNode, idGenerator : Iterator<Long>, numVertices : Int) : List<TOPNode> {
+fun TOPBranch(solvedNode: TOPNode, idGenerator : Iterator<Long>, instance : Instance) : List<TOPNode> {
 
     // Tolerance used for comparing doubles
     val eps = 1E-6
@@ -42,7 +43,7 @@ fun TOPBranch(solvedNode: TOPNode, idGenerator : Iterator<Long>, numVertices : I
         throw TOPException("Vertex reduced costs null when trying to branch")
 
     // Finding the flow into each vertex and flow across each arc
-    val vertexInflow = MutableList(numVertices) { 0.0 }
+    val vertexInflow = MutableList(instance.numVertices) { 0.0 }
     val arcFlow : MutableMap<Pair<Int, Int>, Double> = mutableMapOf()
     for (sol in solvedNode.lpSolution) {
         for (arc in sol.first.path.zipWithNext()) {
@@ -63,7 +64,8 @@ fun TOPBranch(solvedNode: TOPNode, idGenerator : Iterator<Long>, numVertices : I
     var vertexToBranch : Int? = null
     var leastReducedCost = Double.MAX_VALUE
 
-    for (vertex in 0 until numVertices) {
+    for (vertex in 0 until instance.numVertices) {
+
         // Checking if the flow is fractional
         if (vertexInflow[vertex] >= eps && 1 - vertexInflow[vertex] >= eps) {
             // Flow into vertex is integer valued
@@ -111,6 +113,10 @@ fun TOPBranch(solvedNode: TOPNode, idGenerator : Iterator<Long>, numVertices : I
         var arcToBranch : Pair<Int, Int>? = null
 
         for ((arc, flow) in arcFlow) {
+
+            // Never branching on arc using source or destination
+            if (arc.first == instance.source || arc.first == instance.destination)
+                continue
 
             // Checking if the flow is fractional
             if (flow >= eps && 1 - flow >= eps) {
