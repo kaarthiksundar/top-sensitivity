@@ -5,7 +5,7 @@ import top.data.Route
 
 data class TOPNode(
     override val id: Long,
-    override val parentLpObjective: Double = Double.MAX_VALUE,
+    override val parentLpObjective: Double = -Double.MAX_VALUE,
     override val lpFeasible: Boolean = false,
     override val lpIntegral: Boolean = false,
     override val lpObjective: Double = 0.0,
@@ -15,10 +15,10 @@ data class TOPNode(
     val forbiddenEdges : List<Pair<Int, Int>> = listOf(),
     val lpSolution : List<Pair<Route, Double>> = listOf(),
     val mipSolution : List<Route> = listOf(),
+    override val mipObjective : Double? = null,
     val vertexReducedCosts : List<Double>? = null
 ) : INode {
 
-    override val mipObjective : Double? = getMIPObjective()
 
     override fun toString() : String {
         val clauses = mutableListOf("ID = $id")

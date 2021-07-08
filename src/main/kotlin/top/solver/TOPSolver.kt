@@ -55,6 +55,7 @@ class TOPSolver(
             forbiddenEdges = unsolvedNode.forbiddenEdges,
             lpSolution = cgs.lpSolution,
             mipSolution = cgs.mipSolution,
+            mipObjective = cgs.mipObjective,
             vertexReducedCosts = cgs.vertexReducedCosts
         )
     }

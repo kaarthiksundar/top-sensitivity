@@ -115,7 +115,7 @@ fun TOPBranch(solvedNode: TOPNode, idGenerator : Iterator<Long>, instance : Inst
         for ((arc, flow) in arcFlow) {
 
             // Never branching on arc using source or destination
-            if (arc.first == instance.source || arc.first == instance.destination)
+            if (arc.first == instance.source)
                 continue
 
             // Checking if the flow is fractional
