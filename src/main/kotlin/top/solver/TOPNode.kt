@@ -14,10 +14,11 @@ data class TOPNode(
     val forbiddenVertices : IntArray = intArrayOf(),
     val forbiddenEdges : List<Pair<Int, Int>> = listOf(),
     val lpSolution : List<Pair<Route, Double>> = listOf(),
+    val mipSolution : List<Route> = listOf(),
     val vertexReducedCosts : List<Double>? = null
 ) : INode {
 
-    override val mipObjective : Double? = null
+    override val mipObjective : Double? = getMIPObjective()
 
     override fun toString() : String {
         val clauses = mutableListOf("ID = $id")
@@ -31,6 +32,18 @@ data class TOPNode(
             clauses.add("infeasible")
 
         return clauses.joinToString(", ", "Node(",")")
+    }
+
+    private fun getMIPObjective() : Double? {
+        if (mipSolution.isEmpty())
+            return null
+
+        var obj = 0.0
+        for (route in mipSolution) {
+            obj += route.score
+        }
+
+        return obj
     }
 
 }
