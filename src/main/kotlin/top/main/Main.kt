@@ -1,13 +1,15 @@
 package top.main
 
+import branchandbound.api.BranchAndBoundApi
+import branchandbound.api.SelectionStrategy
 import ilog.cplex.IloCplex
 import mu.KotlinLogging
 import top.data.Instance
 import top.data.InstanceBuilder
 import top.data.Parameters
-import top.solver.ColumnGenerationSolver
-import top.solver.enumeratePaths
+import top.solver.*
 import kotlin.system.measureTimeMillis
+import mu.KLogging
 
 private val log = KotlinLogging.logger {}
 
@@ -22,6 +24,7 @@ fun main(args: Array<String>) {
         path = parameters.instancePath
     ).getInstance()
 
+    /*
     val cplex = IloCplex()
     val cgs = ColumnGenerationSolver(instance, cplex, parameters)
 
@@ -31,6 +34,33 @@ fun main(args: Array<String>) {
 
     log.info("LP Objective: ${cgs.lpObjective}")
     log.info("LP Solution: ${cgs.lpSolution}")
+    log.info("LP Integer: ${cgs.lpIntegral}")
+    log.info("Time Elapsed (sec): ${t1 / 1000.0}")
+    log.info("MIP Objective: ${cgs.mipObjective}")
+    log.info("MIP Solution: ${cgs.mipSolution}")
+
+     */
+
+    val numSolvers = 1
+
+    val idGenerator = generateSequence(0L) {it + 1}.iterator()
+
+    val solvers = List(numSolvers) {
+        TOPSolver(instance, IloCplex(), parameters)
+    }
+
+    val rootNode = TOPNode(id = idGenerator.next())
+    val t1 = measureTimeMillis {
+        val solution = BranchAndBoundApi.runBranchAndBound(
+            solvers, SelectionStrategy.BEST_BOUND, rootNode
+        ) {
+            TOPBranch((it as TOPNode), idGenerator, instance)
+        }
+        log.info("Optimal IP Objective: ${solution!!.objective}")
+        log.info("Number of Nodes: ${solution.numCreatedNodes}")
+        log.info("Number of Feasible Nodes: ${solution.numFeasibleNodes}")
+    }
+
     log.info("Time Elapsed (sec): ${t1 / 1000.0}")
 }
 
