@@ -41,7 +41,7 @@ fun main(args: Array<String>) {
 
      */
 
-    val numSolvers = 1
+    val numSolvers = 8
 
     val idGenerator = generateSequence(0L) {it + 1}.iterator()
 
@@ -56,9 +56,9 @@ fun main(args: Array<String>) {
         ) {
             TOPBranch((it as TOPNode), idGenerator, instance)
         }
-        log.info("Optimal IP Objective: ${solution!!.objective}")
-        log.info("Number of Nodes: ${solution.numCreatedNodes}")
-        log.info("Number of Feasible Nodes: ${solution.numFeasibleNodes}")
+        log.info("Number of Nodes: ${solution!!.numCreatedNodes}")
+        log.info("Number of Feasible Nodes: ${solution!!.numFeasibleNodes}")
+        log.info("Solution Objective: ${solution!!.incumbent!!.mipObjective}")
     }
 
     log.info("Time Elapsed (sec): ${t1 / 1000.0}")
