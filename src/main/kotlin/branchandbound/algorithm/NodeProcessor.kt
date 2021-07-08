@@ -142,12 +142,21 @@ class NodeProcessor(private val numSolvers: Int, comparator: Comparator<INode>) 
             log.debug { "Node ${solvedNode.id} pruned by infeasibility" }
             return true
         }
+        /*
         incumbent?.lpObjective?.let {
             if (it >= solvedNode.lpObjective) {
                 log.debug { "Node ${solvedNode.id} pruned by bound" }
                 return true
             }
         }
+
+         */
+        if (solvedNode.lpObjective <= lowerBound - 1E-6) {
+            log.debug { "Node ${solvedNode.id} pruned by bound" }
+            return true
+        }
+
+
         if (solvedNode.lpIntegral) {
             log.debug { "Node ${solvedNode.id} pruned by integrality" }
             updateLowerBound(solvedNode)
@@ -194,6 +203,7 @@ class NodeProcessor(private val numSolvers: Int, comparator: Comparator<INode>) 
         log.info { "number of feasible nodes: $numFeasible" }
         log.info { "maximum parallel solves: $maxParallelSolves" }
         log.info { "sending solution to solution channel..." }
+        log.info { "Final upper bound: $upperBound"}
         solutionChannel.send(
             incumbent?.let {
                 Solution(
