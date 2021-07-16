@@ -49,7 +49,7 @@ fun main(args: Array<String>) {
         TOPSolver(instance, IloCplex(), parameters)
     }
 
-    val rootNode = TOPNode(id = idGenerator.next())
+    val rootNode = TOPNode(parent = null, id = idGenerator.next())
     val t1 = measureTimeMillis {
         val solution = BranchAndBoundApi.runBranchAndBound(
             solvers, SelectionStrategy.BEST_BOUND, rootNode

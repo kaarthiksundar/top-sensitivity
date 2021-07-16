@@ -4,6 +4,7 @@ import branchandbound.api.INode
 import top.data.Route
 
 data class TOPNode(
+    val parent: TOPNode?,
     override val id: Long,
     override val parentLpObjective: Double = -Double.MAX_VALUE,
     override val lpFeasible: Boolean = false,
@@ -19,6 +20,7 @@ data class TOPNode(
     val vertexReducedCosts : List<Double>? = null
 ) : INode {
 
+    var children : List<TOPNode>? = null
 
     override fun toString() : String {
         val clauses = mutableListOf("ID = $id")

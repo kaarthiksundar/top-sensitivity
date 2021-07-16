@@ -44,6 +44,7 @@ class TOPSolver(
 
         // Returning a solved node object with updated properties from the solution to the RMP
         return TOPNode(
+            parent = unsolvedNode.parent,
             id = unsolvedNode.id,
             parentLpObjective = unsolvedNode.parentLpObjective,
             lpFeasible = !cgs.lpInfeasible,
