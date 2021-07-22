@@ -7,6 +7,7 @@ import kotlinx.coroutines.channels.SendChannel
 import mu.KotlinLogging
 import top.Util
 import java.util.*
+import kotlin.math.absoluteValue
 import kotlin.math.max
 
 /**
@@ -142,15 +143,7 @@ class NodeProcessor(private val numSolvers: Int, comparator: Comparator<INode>) 
             log.debug { "Node ${solvedNode.id} pruned by infeasibility" }
             return true
         }
-        /*
-        incumbent?.lpObjective?.let {
-            if (it >= solvedNode.lpObjective) {
-                log.debug { "Node ${solvedNode.id} pruned by bound" }
-                return true
-            }
-        }
 
-         */
         if (solvedNode.lpObjective <= lowerBound - 1E-6) {
             log.debug { "Node ${solvedNode.id} pruned by bound" }
             return true
@@ -162,6 +155,10 @@ class NodeProcessor(private val numSolvers: Int, comparator: Comparator<INode>) 
             updateLowerBound(solvedNode)
             return true
         }
+
+        if (solvedNode.mipObjective != null && (solvedNode.lpObjective - solvedNode.mipObjective!!).absoluteValue <= Util.EPS)
+            return true
+
         return false
     }
 
