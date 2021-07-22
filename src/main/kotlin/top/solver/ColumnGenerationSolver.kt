@@ -70,6 +70,9 @@ class ColumnGenerationSolver(
     var lpIntegral = false
         private set
 
+    var dualUpperBound = Double.MAX_VALUE
+        private set
+
     /**
      * List of pairs of Route objects and the corresponding value of the route variable for the
      * linear relaxation of the set cover model.
@@ -112,6 +115,8 @@ class ColumnGenerationSolver(
                 columnGenIteration++
             }
         }
+        // Finished solving the master problem associated with the current node
+
         // If the LP is feasible, solve the MIP in order to get a better lower bound
         if (!lpInfeasible)
             solveRestrictedMasterProblem(asMIP = true)
@@ -215,6 +220,31 @@ class ColumnGenerationSolver(
         }
 
         return reducedGraph
+    }
+
+    private fun updateDualUpperBound(setCoverModel: SetCoverModel) {
+
+        dualUpperBound = 0.0
+
+        // Adding dual variables for vertex cover constraints
+        dualUpperBound += setCoverModel.getVertexDuals().sum()
+
+        // Duals corresponding to enforced vertices
+        for ((vertex, dual) in setCoverModel.getMustVisitVertexDuals()) {
+            dualUpperBound -= dual
+        }
+
+        // Duals corresponding to enforced arcs
+        for ((arc, dual) in setCoverModel.getMustVisitEdgeDuals()) {
+            dualUpperBound -= dual
+        }
+
+        // Dual term corresponding to fleet size constraint
+        dualUpperBound += setCoverModel.getRouteDual() * instance.numVehicles
+
+        // Duals corresponding to route variables
+        TODO("FIND OUT HOW TO IMPLEMENT THIS PART")
+
     }
 
     companion object : KLogging()
