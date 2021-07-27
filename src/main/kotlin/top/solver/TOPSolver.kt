@@ -57,7 +57,8 @@ class TOPSolver(
             lpSolution = cgs.lpSolution,
             mipSolution = cgs.mipSolution,
             mipObjective = cgs.mipObjective,
-            vertexReducedCosts = cgs.vertexReducedCosts
+            vertexReducedCosts = cgs.vertexReducedCosts,
+            dualLPUpperBound = cgs.dualLPUpperBound
         )
     }
 }
