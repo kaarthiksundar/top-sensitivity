@@ -8,6 +8,7 @@ import top.data.Route
 import top.main.SetGraph
 import top.main.TOPException
 import top.main.getCopy
+import kotlin.math.max
 
 
 /**
@@ -70,7 +71,7 @@ class ColumnGenerationSolver(
     var lpIntegral = false
         private set
 
-    var dualUpperBound = Double.MAX_VALUE
+    var dualLPUpperBound = Double.POSITIVE_INFINITY
         private set
 
     /**
@@ -192,6 +193,10 @@ class ColumnGenerationSolver(
 
             // Checking if the LP is infeasible by examining the value of the auxiliary variable
             lpInfeasible = setCoverModel.getAuxiliaryVariableSolution() >= parameters.eps
+
+            // Updating dual LP upper bound. When LP infeasible, duals used are from Phase I of Simplex
+            updateDualUpperBound(setCoverModel)
+
         }
         cplex.clearModel()
     }
@@ -224,26 +229,27 @@ class ColumnGenerationSolver(
 
     private fun updateDualUpperBound(setCoverModel: SetCoverModel) {
 
-        dualUpperBound = 0.0
+        dualLPUpperBound = 0.0
 
         // Adding dual variables for vertex cover constraints
-        dualUpperBound += setCoverModel.getVertexDuals().sum()
+        dualLPUpperBound += setCoverModel.getVertexDuals().sum()
 
         // Duals corresponding to enforced vertices
-        for ((vertex, dual) in setCoverModel.getMustVisitVertexDuals()) {
-            dualUpperBound -= dual
+        for ((_, dual) in setCoverModel.getMustVisitVertexDuals()) {
+            dualLPUpperBound -= dual
         }
 
         // Duals corresponding to enforced arcs
-        for ((arc, dual) in setCoverModel.getMustVisitEdgeDuals()) {
-            dualUpperBound -= dual
+        for ((_, dual) in setCoverModel.getMustVisitEdgeDuals()) {
+            dualLPUpperBound -= dual
         }
 
         // Dual term corresponding to fleet size constraint
-        dualUpperBound += setCoverModel.getRouteDual() * instance.numVehicles
+        dualLPUpperBound += setCoverModel.getRouteDual() * (instance.numVehicles + 1)
 
-        // Duals corresponding to route variables
-        TODO("FIND OUT HOW TO IMPLEMENT THIS PART")
+        for (routeVariableDual in setCoverModel.getRouteVariableDuals()) {
+            dualLPUpperBound += max(routeVariableDual, 0.0)
+        }
 
     }
 
