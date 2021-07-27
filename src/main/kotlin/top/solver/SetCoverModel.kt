@@ -283,6 +283,10 @@ class SetCoverModel(private var cplex: IloCplex) {
      */
     fun getRouteDual(): Double = cplex.getDual(constraints[routeConstraintId])
 
+    fun getRouteVariableDuals() : List<Double> = (0 until routeVariable.size).map {
+        cplex.getReducedCost(routeVariable[it])
+    }
+
     /**
      * Function that returns the duals for the vertex covering constraints
      */
