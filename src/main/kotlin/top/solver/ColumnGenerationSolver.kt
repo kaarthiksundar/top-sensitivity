@@ -245,7 +245,7 @@ class ColumnGenerationSolver(
         }
 
         // Dual term corresponding to fleet size constraint
-        dualLPUpperBound += setCoverModel.getRouteDual() * (instance.numVehicles + 1)
+        dualLPUpperBound += setCoverModel.getRouteDual() * parameters.adjustedFleetSize
 
         for (routeVariableDual in setCoverModel.getRouteVariableDuals()) {
             dualLPUpperBound += max(routeVariableDual, 0.0)
