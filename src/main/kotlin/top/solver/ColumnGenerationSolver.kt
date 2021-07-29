@@ -232,7 +232,13 @@ class ColumnGenerationSolver(
         dualLPUpperBound = 0.0
 
         // Adding dual variables for vertex cover constraints
+        val vertexDuals = setCoverModel.getVertexDuals()
         dualLPUpperBound += setCoverModel.getVertexDuals().sum()
+
+        for (vertex in parameters.verticesToRemove) {
+            dualLPUpperBound -= vertexDuals[vertex]
+        }
+
 
         // Duals corresponding to enforced vertices
         for ((_, dual) in setCoverModel.getMustVisitVertexDuals()) {
