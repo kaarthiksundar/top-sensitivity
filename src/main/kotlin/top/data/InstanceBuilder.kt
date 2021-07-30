@@ -106,7 +106,7 @@ class InstanceBuilder(
         for (i in 0 until numVertices) {
             if (i == destination) continue
             for (j in 0 until numVertices) {
-                if (i == j) continue
+                if (i == j || j == source) continue
                 val edgeLength: Double = getEdgeLength(vertexCoords[i], vertexCoords[j])
                 if (edgeLength > budget) continue
                 val edge = DefaultWeightedEdge()
