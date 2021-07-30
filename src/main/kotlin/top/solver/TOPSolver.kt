@@ -44,6 +44,7 @@ class TOPSolver(
 
         // Returning a solved node object with updated properties from the solution to the RMP
         return TOPNode(
+            parent = unsolvedNode.parent,
             id = unsolvedNode.id,
             parentLpObjective = unsolvedNode.parentLpObjective,
             lpFeasible = !cgs.lpInfeasible,
@@ -56,7 +57,8 @@ class TOPSolver(
             lpSolution = cgs.lpSolution,
             mipSolution = cgs.mipSolution,
             mipObjective = cgs.mipObjective,
-            vertexReducedCosts = cgs.vertexReducedCosts
+            vertexReducedCosts = cgs.vertexReducedCosts,
+            dualLPUpperBound = cgs.dualLPUpperBound
         )
     }
 }

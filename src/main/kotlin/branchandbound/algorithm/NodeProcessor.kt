@@ -149,20 +149,15 @@ class NodeProcessor(private val numSolvers: Int, comparator: Comparator<INode>) 
             return true
         }
 
+
         if (solvedNode.lpIntegral) {
             log.debug { "Node ${solvedNode.id} pruned by integrality" }
             updateLowerBound(solvedNode)
             return true
         }
 
-        if (solvedNode.mipObjective != null) {
-
-            if ((solvedNode.mipObjective!! - solvedNode.lpObjective).absoluteValue <= Util.EPS) {
-                log.debug {"Node ${solvedNode.id} pruned by LP objective matching MIP objective"}
-                return true
-            }
-
-        }
+        if (solvedNode.mipObjective != null && (solvedNode.lpObjective - solvedNode.mipObjective!!).absoluteValue <= Util.EPS)
+            return true
 
         return false
     }

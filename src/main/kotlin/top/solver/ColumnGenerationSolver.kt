@@ -8,6 +8,7 @@ import top.data.Route
 import top.main.SetGraph
 import top.main.TOPException
 import top.main.getCopy
+import kotlin.math.max
 
 
 /**
@@ -70,6 +71,9 @@ class ColumnGenerationSolver(
     var lpIntegral = false
         private set
 
+    var dualLPUpperBound = Double.POSITIVE_INFINITY
+        private set
+
     /**
      * List of pairs of Route objects and the corresponding value of the route variable for the
      * linear relaxation of the set cover model.
@@ -112,6 +116,8 @@ class ColumnGenerationSolver(
                 columnGenIteration++
             }
         }
+        // Finished solving the master problem associated with the current node
+
         // If the LP is feasible, solve the MIP in order to get a better lower bound
         if (!lpInfeasible)
             solveRestrictedMasterProblem(asMIP = true)
@@ -187,6 +193,10 @@ class ColumnGenerationSolver(
 
             // Checking if the LP is infeasible by examining the value of the auxiliary variable
             lpInfeasible = setCoverModel.getAuxiliaryVariableSolution() >= parameters.eps
+
+            // Updating dual LP upper bound. When LP infeasible, duals used are from Phase I of Simplex
+            updateDualUpperBound(setCoverModel)
+
         }
         cplex.clearModel()
     }
@@ -215,6 +225,38 @@ class ColumnGenerationSolver(
         }
 
         return reducedGraph
+    }
+
+    private fun updateDualUpperBound(setCoverModel: SetCoverModel) {
+
+        dualLPUpperBound = 0.0
+
+        // Adding dual variables for vertex cover constraints
+        val vertexDuals = setCoverModel.getVertexDuals()
+        dualLPUpperBound += setCoverModel.getVertexDuals().sum()
+
+        for (vertex in parameters.verticesToRemove) {
+            dualLPUpperBound -= vertexDuals[vertex]
+        }
+
+
+        // Duals corresponding to enforced vertices
+        for ((_, dual) in setCoverModel.getMustVisitVertexDuals()) {
+            dualLPUpperBound -= dual
+        }
+
+        // Duals corresponding to enforced arcs
+        for ((_, dual) in setCoverModel.getMustVisitEdgeDuals()) {
+            dualLPUpperBound -= dual
+        }
+
+        // Dual term corresponding to fleet size constraint
+        dualLPUpperBound += setCoverModel.getRouteDual() * parameters.adjustedFleetSize
+
+        for (routeVariableDual in setCoverModel.getRouteVariableDuals()) {
+            dualLPUpperBound += max(routeVariableDual, 0.0)
+        }
+
     }
 
     companion object : KLogging()

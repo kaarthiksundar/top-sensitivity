@@ -5,12 +5,15 @@ package top.data
  *
  * @param instanceName Name of instance file with .txt extension
  * @param instancePath Local path to the folder containing the instance file
+ * @param outputPath Local path for output KPIs
  * @param timeLimitInSeconds Maximum amount of time the solver can run for
- * @param algorithm Integer indicating whether full enumeration or branch-and-price is used.
  * @param eps Constant value used as the tolerance for comparing double values (Default: 1e-5)
  * @param maxColumnsAdded Maximum number of columns added when solving the pricing problem
- * @param numInitialRoutes Number of routes used for the first iteration of the column generation scheme
  * @param numBits Constant value representing the number of bits of the operating system (Default: 64)
+ * @param useDomination Boolean flag to turn on/off domination when solving the pricing problem
+ * @param twoWayDomination Boolean flag to turn on/off two-way domination checking when solving the pricing problem
+ * @param verticesToRemove List of vertices to consider removing for post-optimality analysis
+ * @param adjustedFleetSize New fleet size to consider for post-optimality analysis
  */
 
 data class Parameters(
@@ -18,13 +21,13 @@ data class Parameters(
     val instancePath: String,
     val outputPath: String,
     val timeLimitInSeconds: Int,
-    val algorithm: Int,
     val eps: Double = 1e-5,
     val maxColumnsAdded: Int = 500,
     val maxPathsAfterSearch: Int = 10,
-    val numInitialRoutes: Int = 10,
     val numBits: Int = 64,
     val useDomination: Boolean = true,
-    val twoWayDomination: Boolean = true
+    val twoWayDomination: Boolean = true,
+    val verticesToRemove : List<Int> = listOf(),
+    val adjustedFleetSize : Int = 3
 )
 

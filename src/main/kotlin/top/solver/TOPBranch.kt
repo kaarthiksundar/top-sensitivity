@@ -84,6 +84,7 @@ fun TOPBranch(solvedNode: TOPNode, idGenerator : Iterator<Long>, instance : Inst
         // Branching on fractional flow vertex
 
         val forbiddenVisitNode = TOPNode(
+            parent = solvedNode,
             id = idGenerator.next(),
             parentLpObjective = solvedNode.lpObjective,
             mustVisitVertices = solvedNode.mustVisitVertices,
@@ -93,6 +94,7 @@ fun TOPBranch(solvedNode: TOPNode, idGenerator : Iterator<Long>, instance : Inst
         )
 
         val enforcedVisitNode = TOPNode(
+            parent = solvedNode,
             id = idGenerator.next(),
             parentLpObjective = solvedNode.lpObjective,
             mustVisitVertices = solvedNode.mustVisitVertices + vertexToBranch,
@@ -100,6 +102,9 @@ fun TOPBranch(solvedNode: TOPNode, idGenerator : Iterator<Long>, instance : Inst
             forbiddenVertices = solvedNode.forbiddenVertices,
             forbiddenEdges = solvedNode.forbiddenEdges
         )
+
+        // Updating children of solvedNode
+        solvedNode.children = listOf(forbiddenVisitNode, enforcedVisitNode)
 
         return listOf(forbiddenVisitNode, enforcedVisitNode)
     }
@@ -144,6 +149,7 @@ fun TOPBranch(solvedNode: TOPNode, idGenerator : Iterator<Long>, instance : Inst
 
             // Node with arc (v_i, v_j) enforced
             val enforcedArcNode = TOPNode(
+                parent = solvedNode,
                 id = idGenerator.next(),
                 parentLpObjective = solvedNode.lpObjective,
                 mustVisitVertices = solvedNode.mustVisitVertices,
@@ -154,6 +160,7 @@ fun TOPBranch(solvedNode: TOPNode, idGenerator : Iterator<Long>, instance : Inst
 
             // Node with arc (v_i, v_j) forbidden
             val forbiddenArcNode = TOPNode(
+                parent = solvedNode,
                 id = idGenerator.next(),
                 parentLpObjective = solvedNode.lpObjective,
                 mustVisitVertices = solvedNode.mustVisitVertices,
@@ -161,6 +168,9 @@ fun TOPBranch(solvedNode: TOPNode, idGenerator : Iterator<Long>, instance : Inst
                 forbiddenVertices = solvedNode.forbiddenVertices,
                 forbiddenEdges = solvedNode.forbiddenEdges
             )
+
+            // Updating children of solvedNode
+            solvedNode.children = listOf(enforcedArcNode, forbiddenArcNode)
 
             return listOf(enforcedArcNode, forbiddenArcNode)
         }
@@ -171,6 +181,7 @@ fun TOPBranch(solvedNode: TOPNode, idGenerator : Iterator<Long>, instance : Inst
 
             // v_i is forbidden
             val forbiddenSourceNode = TOPNode(
+                parent = solvedNode,
                 id = idGenerator.next(),
                 parentLpObjective = solvedNode.parentLpObjective,
                 mustVisitVertices = solvedNode.mustVisitVertices,
@@ -181,6 +192,7 @@ fun TOPBranch(solvedNode: TOPNode, idGenerator : Iterator<Long>, instance : Inst
 
             // Enforce v_i and enforce (v_i, v_j)
             val enforceSourceAndEnforceArcNode = TOPNode(
+                parent = solvedNode,
                 id = idGenerator.next(),
                 parentLpObjective = solvedNode.parentLpObjective,
                 mustVisitVertices = solvedNode.mustVisitVertices + arcToBranch.first,
@@ -191,6 +203,7 @@ fun TOPBranch(solvedNode: TOPNode, idGenerator : Iterator<Long>, instance : Inst
 
             // Enforce v_i and forbid (v_i, v_j)
             val enforceSourceAndForbidArcNode = TOPNode(
+                parent = solvedNode,
                 id = idGenerator.next(),
                 parentLpObjective = solvedNode.parentLpObjective,
                 mustVisitVertices = solvedNode.mustVisitVertices + arcToBranch.first,
@@ -198,6 +211,9 @@ fun TOPBranch(solvedNode: TOPNode, idGenerator : Iterator<Long>, instance : Inst
                 forbiddenVertices = solvedNode.forbiddenVertices,
                 forbiddenEdges = solvedNode.forbiddenEdges + arcToBranch
             )
+
+            // Updating children of solvedNode
+            solvedNode.children = listOf(forbiddenSourceNode, enforceSourceAndEnforceArcNode, enforceSourceAndForbidArcNode)
 
             return listOf(forbiddenSourceNode, enforceSourceAndEnforceArcNode, enforceSourceAndForbidArcNode)
         }
