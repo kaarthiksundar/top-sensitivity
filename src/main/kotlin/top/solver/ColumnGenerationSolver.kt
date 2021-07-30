@@ -19,6 +19,10 @@ import kotlin.math.max
  * @param instance [Instance] object containing relevant problem information
  * @param cplex [IloCplex] object containing the CPLEX model of the set cover model
  * @param parameters [Parameters] object containing relevant information for the solver
+ * @param mustVisitVertices Array of vertices enforced to be visited by at least one vehicle
+ * @param mustVisitEdges List of edges enforced to be used by at least one vehicle
+ * @param forbiddenVertices Array of vertices forbidden to be visited by any vehicle
+ * @param forbiddenEdges List of edges forbidden to be used by any vehicle
  */
 class ColumnGenerationSolver(
     private val instance: Instance,
@@ -56,21 +60,41 @@ class ColumnGenerationSolver(
     var lpObjective = 0.0
         private set
 
+    /**
+     * Boolean indicating whether the node's relaxed master problem has been solved to optimality.
+     */
     var lpOptimal = false
         private set
 
+    /**
+     * Boolean indicating whether the node's relaxed master problem is infeasible.
+     */
     var lpInfeasible = true
         private set
 
+    /**
+     * Objective value when solving the relaxed master problem as a MIP
+     */
     var mipObjective = 0.0
         private set
 
+    /**
+     * Solution when solving the relaxed master problem as a MIP
+     */
     var mipSolution = listOf<Route>()
         private set
 
+    /**
+     * Boolean indicating whether the node's relaxed master problem's solution is integer-valued (within an accepted
+     * tolerance epsilon defined in [Parameters])
+     */
     var lpIntegral = false
         private set
 
+    /**
+     * Upper bound on the dual of the relaxed master problem when the right-hand side of the relaxed master problem
+     * is modified. The modification may be a change in the fleet size, removing vertices from the graph, or both.
+     */
     var dualLPUpperBound = Double.POSITIVE_INFINITY
         private set
 
@@ -81,7 +105,7 @@ class ColumnGenerationSolver(
     var lpSolution = mutableListOf<Pair<Route, Double>>()
 
     /**
-     * Solve master problem (linear relaxation for set cover model) using column generation.
+     * Solve linear relaxation of the set cover model for the current node using column generation.
      */
     fun solve() {
         var columnGenIteration = 0
@@ -135,8 +159,11 @@ class ColumnGenerationSolver(
     /**
      * Solve restricted master problem (linear relaxation of the set cover model using a subset
      * of all feasible routes).
+     *
+     * @param asMIP Boolean indicating whether to solve the RMP as a MIP for a tighter lower bound
      */
     private fun solveRestrictedMasterProblem(asMIP : Boolean = false) {
+
         // Creating the restricted master problem and solving
         val setCoverModel = SetCoverModel(cplex)
         setCoverModel.createModel(
@@ -196,12 +223,19 @@ class ColumnGenerationSolver(
 
             // Updating dual LP upper bound. When LP infeasible, duals used are from Phase I of Simplex
             updateDualUpperBound(setCoverModel)
-
         }
+
         cplex.clearModel()
     }
 
+    /**
+     * Removes forbidden vertices and forbidden edges resulting from the
+     * branch-and-bound procedure.
+     *
+     * @return reducedGraph Graph with forbidden vertices and edges removed
+     */
     private fun generateReducedGraph() : SetGraph {
+
         val reducedGraph = instance.graph.getCopy()
 
         // Removing forbidden vertices (removes incident edges as well)
@@ -216,6 +250,7 @@ class ColumnGenerationSolver(
 
         // Removing forbidden edges
         for (edge in forbiddenEdges) {
+
             // Checking the edge exists. If so, remove.
             if (reducedGraph.containsEdge(edge.first, edge.second))
                 reducedGraph.removeEdge(edge.first, edge.second)
@@ -227,6 +262,10 @@ class ColumnGenerationSolver(
         return reducedGraph
     }
 
+    /**
+     * Computes the dual upper bound (C^t in the paper) using the duals from solving the relaxed MP associated
+     * with the current node to optimality.
+     */
     private fun updateDualUpperBound(setCoverModel: SetCoverModel) {
 
         dualLPUpperBound = 0.0
@@ -238,7 +277,6 @@ class ColumnGenerationSolver(
         for (vertex in parameters.verticesToRemove) {
             dualLPUpperBound -= vertexDuals[vertex]
         }
-
 
         // Duals corresponding to enforced vertices
         for ((_, dual) in setCoverModel.getMustVisitVertexDuals()) {
@@ -256,7 +294,6 @@ class ColumnGenerationSolver(
         for (routeVariableDual in setCoverModel.getRouteVariableDuals()) {
             dualLPUpperBound += max(routeVariableDual, 0.0)
         }
-
     }
 
     companion object : KLogging()
