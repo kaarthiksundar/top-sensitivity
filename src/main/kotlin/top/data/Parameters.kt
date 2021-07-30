@@ -27,7 +27,7 @@ data class Parameters(
     val numBits: Int = 64,
     val useDomination: Boolean = true,
     val twoWayDomination: Boolean = true,
-    val verticesToRemove : List<Int> = listOf(),
-    val adjustedFleetSize : Int = 3
+    val verticesToRemove : List<Int>,
+    val adjustedFleetSize : Int
 )
 
