@@ -84,6 +84,8 @@ class SetCoverModel(private var cplex: IloCplex) {
      * @param instance object with all routing problem data
      * @param routes routes to use as decision variables in set cover model
      * @param asMIP model is solved as MIP if this flag is true, and LP otherwise
+     * @param mustVisitVertices Array of vertices enforced to be visited
+     * @param mustVisitEdges List of edges enforced to be used
      */
     fun createModel(
         instance: Instance,
@@ -106,7 +108,6 @@ class SetCoverModel(private var cplex: IloCplex) {
          * Auxiliary variable used to detect if a problem is infeasible
          */
         auxiliaryVariable = cplex.numVar(0.0, Double.MAX_VALUE, IloNumVarType.Float)
-
 
         /**
          *   List of routes.
@@ -283,6 +284,9 @@ class SetCoverModel(private var cplex: IloCplex) {
      */
     fun getRouteDual(): Double = cplex.getDual(constraints[routeConstraintId])
 
+    /**
+     * Function that returns a list of the duals associated with each route decision variable.
+     */
     fun getRouteVariableDuals() : List<Double> = (0 until routeVariable.size).map {
         cplex.getReducedCost(routeVariable[it])
     }
@@ -293,7 +297,6 @@ class SetCoverModel(private var cplex: IloCplex) {
     fun getVertexDuals(): List<Double> = (0 until vertexCoverConstraintId.size).map {
         if (vertexCoverConstraintId[it] != null)
             cplex.getDual(constraints[vertexCoverConstraintId[it]!!]) else 0.0
-
     }
 
     /**
