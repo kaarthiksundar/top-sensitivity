@@ -58,7 +58,9 @@ private fun parseArgs(args: Array<String>): Parameters {
         instanceName = parser.instanceName,
         instancePath = parser.instancePath,
         timeLimitInSeconds = parser.timeLimitInSeconds,
-        outputPath = parser.outputPath
+        outputPath = parser.outputPath,
+        verticesToRemove = parser.verticesToRemove,
+        adjustedFleetSize = parser.adjustedFleetSize
     )
 }
 
