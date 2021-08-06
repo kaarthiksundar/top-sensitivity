@@ -460,9 +460,6 @@ class PricingProblem(
      */
     private fun addIfNonDominated(extension: State, existingStates: MutableList<State>) {
 
-        // Marking all unreachable nodes before checking for dominance
-        updateUnreachableVertices(extension)
-
         // Iterating over the existing states in reversed order. Iterating backwards leads to large speed improvements
         // when removing states in the list of existing non-dominated states since there is no concern of skipping
         // an element after removing
@@ -484,41 +481,6 @@ class PricingProblem(
             unprocessedForwardStates.add(extension)
         else
             unprocessedBackwardStates.add(extension)
-    }
-
-    /**
-     * Function that identifies all vertices that are unreachable for a given state in the sense that the time the
-     * vehicle reaches such a vertex after a single move will exceed the given budget. Since only a single move is
-     * considered, the edge lengths need not satisfy the triangle inequality for this to behave properly.
-     */
-    private fun updateUnreachableVertices(state: State) {
-
-        val currentVertex = state.vertex
-
-        if (state.isForward) {
-            for (e in reducedGraph.outgoingEdgesOf(currentVertex)) {
-
-                val targetVertex = reducedGraph.getEdgeTarget(e)
-                val edgeLength = reducedGraph.getEdgeWeight(e)
-
-                if (isCritical[targetVertex] && state.length + edgeLength > budget)
-                    state.markCriticalVertexUnreachable(targetVertex, parameters)
-
-            }
-        }
-        else
-        {
-            for (e in reducedGraph.incomingEdgesOf(currentVertex)) {
-
-                val targetVertex = reducedGraph.getEdgeSource(e)
-                val edgeLength = reducedGraph.getEdgeWeight(e)
-
-                if (isCritical[targetVertex] && state.length + edgeLength > budget)
-                    state.markCriticalVertexUnreachable(targetVertex, parameters)
-
-            }
-        }
-
     }
 
     /**

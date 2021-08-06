@@ -21,7 +21,6 @@ class State private constructor (
     val length: Double,
     val parent: State?,
     private val visitedCriticalVertices: LongArray,
-    private val unreachableCriticalVertices: LongArray,
     private val visitedGeneralVertices: LongArray,
     private val numVerticesVisited: Int,
     val hasCycle : Boolean
@@ -55,8 +54,6 @@ class State private constructor (
         if (isCritical)
             markVisited(newVertex, newVisitedCriticalVertices, parameters)
 
-
-
         // Updating which vertices have been visited regardless if they are critical
         var newHasCycle = hasCycle
         val newVisitedGeneralVertices = visitedGeneralVertices.copyOf()
@@ -79,7 +76,6 @@ class State private constructor (
             length = length + edgeLength,
             parent = this,
             visitedCriticalVertices = newVisitedCriticalVertices,
-            unreachableCriticalVertices = unreachableCriticalVertices.copyOf(),
             visitedGeneralVertices = newVisitedGeneralVertices,
             numVerticesVisited = numVerticesVisited + 1,
             hasCycle = newHasCycle
@@ -177,13 +173,10 @@ class State private constructor (
 
             for (i in visitedCriticalVertices.indices) {
 
-                val thisCombined = visitedCriticalVertices[i] or unreachableCriticalVertices[i]
-                val otherCombined = otherState.visitedCriticalVertices[i] or otherState.unreachableCriticalVertices[i]
-
-                if (thisCombined and otherCombined.inv() != 0L)
+                if (visitedCriticalVertices[i] and otherState.visitedCriticalVertices[i].inv() != 0L)
                     return false
 
-                if (!strict && (thisCombined.inv() and otherCombined != 0L))
+                if (!strict && (visitedCriticalVertices[i].inv() and otherState.visitedCriticalVertices[i] != 0L))
                     strict = true
             }
         }
@@ -205,28 +198,12 @@ class State private constructor (
 
     }
 
-    fun markCriticalVertexUnreachable(vertex: Int, parameters: Parameters) {
-
-        // Finding which set of n bits to update
-        val quotient : Int = vertex / parameters.numBits
-
-        // Finding which bit in the set of n bits to update
-        val remainder : Int = vertex % parameters.numBits
-
-        // Updating
-        unreachableCriticalVertices[quotient] = unreachableCriticalVertices[quotient] or (1L shl remainder)
-
-    }
-
     fun usedCriticalVertex(vertex: Int, parameters: Parameters) : Boolean {
 
         val quotient : Int = vertex / parameters.numBits
         val remainder : Int = vertex % parameters.numBits
 
-        val combined = visitedCriticalVertices[quotient] or unreachableCriticalVertices[quotient]
-
-        return combined and (1L shl remainder) != 0L
-
+        return visitedCriticalVertices[quotient] and (1L shl remainder) != 0L
     }
 
     private fun usedGeneralVertex(vertex: Int, parameters: Parameters) : Boolean {
@@ -261,7 +238,6 @@ class State private constructor (
                 length = 0.0,
                 parent = null,
                 visitedCriticalVertices = arrayOfLongs,
-                unreachableCriticalVertices = LongArray(numberOfLongs) {0L},
                 visitedGeneralVertices = arrayOfLongs,
                 numVerticesVisited = 1,
                 hasCycle = false)
