@@ -108,7 +108,7 @@ class State private constructor (
             // State already has a cycle previously detected, so do not need to check for new cycles
             // Marking the newVertex as visited (even if it was already marked before, because there's no need
             // to check)
-            markVisited(newVertex, visitedGeneralVertices, parameters)
+            markVisited(newVertex, newVisitedGeneralVertices, parameters)
 
             return State(
                 isForward,
