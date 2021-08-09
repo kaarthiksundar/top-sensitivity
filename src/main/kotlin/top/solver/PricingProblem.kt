@@ -391,8 +391,7 @@ class PricingProblem(
                 continue
 
             // Checking if an extension is feasible
-            val edgeLength = reducedGraph.getEdgeWeight(e)
-            val extension = extendIfFeasible(currentState, newVertex, edgeLength) ?: continue
+            val extension = extendIfFeasible(currentState, newVertex, reducedGraph.getEdgeWeight(e)) ?: continue
 
             // Extension is feasible. Update unprocessed forward states
             addIfNonDominated(extension, nonDominatedForwardStates[newVertex])
@@ -420,8 +419,7 @@ class PricingProblem(
                 continue
 
             // Checking if an extension is feasible
-            val edgeLength = reducedGraph.getEdgeWeight(e)
-            val extension = extendIfFeasible(currentState, newVertex, edgeLength) ?: continue
+            val extension = extendIfFeasible(currentState, newVertex, reducedGraph.getEdgeWeight(e)) ?: continue
 
             // Extension is feasible. Update unprocessed backward states
             addIfNonDominated(extension, nonDominatedBackwardStates[newVertex])
