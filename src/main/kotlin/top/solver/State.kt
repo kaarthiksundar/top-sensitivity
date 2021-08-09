@@ -32,6 +32,8 @@ class State private constructor (
      */
     private val bangForBuck = if (length > 0) cost / length else 0.0
 
+    var dominatingPredecessor : Int? = null
+
     /**
      * Create a new State object corresponding to extending the current State's path
      *

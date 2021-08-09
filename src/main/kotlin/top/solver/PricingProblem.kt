@@ -468,11 +468,19 @@ class PricingProblem(
         // an element after removing
         if (parameters.useDomination) {
             for (i in existingStates.indices.reversed()) {
-                if (existingStates[i].dominates(extension, parameters, useVisitCondition))
-                    return
+                if (existingStates[i].dominates(extension, parameters, useVisitCondition)) {
+
+                    // Checking if 2-cycle domination criterion is satisfied
+                    if (canRemoveDominated(existingStates[i], extension))
+                        return
+                }
+
                 if (parameters.twoWayDomination)
-                    if (extension.dominates(existingStates[i], parameters, useVisitCondition))
-                        existingStates.removeAt(i)
+                    if (extension.dominates(existingStates[i], parameters, useVisitCondition)) {
+                        // Checking if 2-cycle domination criterion is satisfied
+                        if (canRemoveDominated(extension, existingStates[i]))
+                            existingStates.removeAt(i)
+                    }
             }
         }
 
@@ -484,6 +492,28 @@ class PricingProblem(
             unprocessedForwardStates.add(extension)
         else
             unprocessedBackwardStates.add(extension)
+    }
+
+    private fun canRemoveDominated(dominating : State, dominated : State) : Boolean {
+
+        // Checking if dominating state and dominated state have same predecessor
+        if (dominating.predecessor == dominated.predecessor)
+            return true
+
+        // Paths have different predecessors.
+
+        // Checking if at least one other dominating resource-feasible path has been found
+        if (dominated.dominatingPredecessor == null) {
+            // dominating state's path is the first resource-feasible path dominating the dominated state.
+            // Store this information
+            dominated.dominatingPredecessor = dominating.predecessor
+            return false
+        }
+        else {
+            // One previous resource-feasible path had been found already
+            return dominated.dominatingPredecessor != dominating.predecessor
+        }
+
     }
 
     /**
