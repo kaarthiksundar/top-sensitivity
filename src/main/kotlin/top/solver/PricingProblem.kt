@@ -326,15 +326,13 @@ class PricingProblem(
             // Updating the optimal route
             if (optimalRoute == null || reducedCost <= optimalRoute!!.reducedCost - eps) {
 
-                val newRoute = Route(
+                optimalRoute = Route(
                     path = forwardState.getPartialPath().asReversed() + backwardState.getPartialPath(),
                     score = forwardState.score + backwardState.score,
                     length = getJoinedPathLength(forwardState, backwardState),
                     reducedCost = reducedCost,
                     isElementary = false
                 )
-
-                optimalRoute = newRoute
             }
         }
 
