@@ -527,9 +527,8 @@ class PricingProblem(
             for (e in reducedGraph.outgoingEdgesOf(state.vertex)) {
 
                 val targetVertex = reducedGraph.getEdgeTarget(e)
-                val edgeLength = reducedGraph.getEdgeWeight(e)
 
-                if (isCritical[targetVertex] && state.length + edgeLength > budget)
+                if (isCritical[targetVertex] && state.length + reducedGraph.getEdgeWeight(e) > budget)
                     state.markUnreachableCriticalVertex(targetVertex, parameters)
 
             }
@@ -543,9 +542,8 @@ class PricingProblem(
             for (e in reducedGraph.incomingEdgesOf(state.vertex)) {
 
                 val sourceVertex = reducedGraph.getEdgeSource(e)
-                val edgeLength = reducedGraph.getEdgeWeight(e)
 
-                if (isCritical[sourceVertex] && state.length + edgeLength > budget)
+                if (isCritical[sourceVertex] && state.length + reducedGraph.getEdgeWeight(e) > budget)
                     state.markUnreachableCriticalVertex(sourceVertex, parameters)
             }
 
