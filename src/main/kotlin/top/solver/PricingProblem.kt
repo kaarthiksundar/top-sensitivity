@@ -322,17 +322,20 @@ class PricingProblem(
         }
         else {
             // Path is not elementary
-            val newRoute = Route(
-                path = forwardState.getPartialPath().asReversed() + backwardState.getPartialPath(),
-                score = forwardState.score + backwardState.score,
-                length = getJoinedPathLength(forwardState, backwardState),
-                reducedCost = reducedCost,
-                isElementary = false
-            )
 
             // Updating the optimal route
-            if (optimalRoute == null || reducedCost <= optimalRoute!!.reducedCost - eps)
+            if (optimalRoute == null || reducedCost <= optimalRoute!!.reducedCost - eps) {
+
+                val newRoute = Route(
+                    path = forwardState.getPartialPath().asReversed() + backwardState.getPartialPath(),
+                    score = forwardState.score + backwardState.score,
+                    length = getJoinedPathLength(forwardState, backwardState),
+                    reducedCost = reducedCost,
+                    isElementary = false
+                )
+
                 optimalRoute = newRoute
+            }
         }
 
     }
