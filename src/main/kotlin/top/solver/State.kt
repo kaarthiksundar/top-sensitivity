@@ -57,6 +57,76 @@ class State private constructor (
         if (isCritical)
             markVisited(newVertex, newVisitedCriticalVertices, parameters)
 
+        val newVisitedGeneralVertices = visitedGeneralVertices.copyOf()
+
+        if (!hasCycle) {
+            // Current state does not already have a cycle present
+
+            // Checking if extension to newVertex results in a cycle
+            if (usedGeneralVertex(newVertex, parameters)) {
+
+                // Extension to newVertex results in a cycle. Don't need to update visited vertices, so directly
+                // return the new state with hasCycle set to true
+
+                return State(
+                    isForward,
+                    vertex = newVertex,
+                    cost = cost + edgeCost,
+                    score = score + newVertexScore,
+                    length = length + edgeLength,
+                    parent = this,
+                    predecessor = vertex,
+                    visitedCriticalVertices = newVisitedCriticalVertices,
+                    visitedGeneralVertices = newVisitedGeneralVertices,
+                    unreachableCriticalVertices = unreachableCriticalVertices.copyOf(),
+                    hasCycle = true
+                )
+            }
+            else {
+                // Extension to new vertex does not result in a cycle, i.e., newVertex has not yet been used.
+
+                // Marking newVertex as visited and return a new state with hasCycle set to false
+                markVisited(newVertex, newVisitedGeneralVertices, parameters)
+
+                return State(
+                    isForward,
+                    vertex = newVertex,
+                    cost = cost + edgeCost,
+                    score = score + newVertexScore,
+                    length = length + edgeLength,
+                    parent = this,
+                    predecessor = vertex,
+                    visitedCriticalVertices = newVisitedCriticalVertices,
+                    visitedGeneralVertices = newVisitedGeneralVertices,
+                    unreachableCriticalVertices = unreachableCriticalVertices.copyOf(),
+                    hasCycle = false
+                )
+            }
+        }
+        else {
+
+            // State already has a cycle previously detected, so do not need to check for new cycles
+            // Marking the newVertex as visited (even if it was already marked before, because there's no need
+            // to check)
+            markVisited(newVertex, visitedGeneralVertices, parameters)
+
+            return State(
+                isForward,
+                vertex = newVertex,
+                cost = cost + edgeCost,
+                score = score + newVertexScore,
+                length = length + edgeLength,
+                parent = this,
+                predecessor = vertex,
+                visitedCriticalVertices = newVisitedCriticalVertices,
+                visitedGeneralVertices = newVisitedGeneralVertices,
+                unreachableCriticalVertices = unreachableCriticalVertices.copyOf(),
+                hasCycle = true
+            )
+
+        }
+
+        /*
         // Updating which vertices have been visited regardless if they are critical
         var newHasCycle = hasCycle
         val newVisitedGeneralVertices = visitedGeneralVertices.copyOf()
@@ -84,6 +154,8 @@ class State private constructor (
             unreachableCriticalVertices = unreachableCriticalVertices.copyOf(),
             hasCycle = newHasCycle
         )
+
+         */
     }
 
     override fun toString(): String {
