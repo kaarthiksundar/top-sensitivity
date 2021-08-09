@@ -461,6 +461,9 @@ class PricingProblem(
      */
     private fun addIfNonDominated(extension: State, existingStates: MutableList<State>) {
 
+        // Updating unreachable critical vertices
+        updateUnreachableVertices(extension)
+
         // Iterating over the existing states in reversed order. Iterating backwards leads to large speed improvements
         // when removing states in the list of existing non-dominated states since there is no concern of skipping
         // an element after removing
@@ -510,6 +513,44 @@ class PricingProblem(
         else {
             // One previous resource-feasible path had been found already
             return dominated.dominatingPredecessor != dominating.predecessor
+        }
+
+    }
+
+    private fun updateUnreachableVertices(state : State) {
+
+
+        if (state.isForward) {
+
+            // Checking neighbor vertices using outgoing edges to see if any vertex cannot be reached
+            // within the path length budget using knowledge of the triangle inequality. Only apply
+            // this check to critical vertices
+
+            for (e in reducedGraph.outgoingEdgesOf(state.vertex)) {
+
+                val targetVertex = reducedGraph.getEdgeTarget(e)
+                val edgeLength = reducedGraph.getEdgeWeight(e)
+
+                if (isCritical[targetVertex] && state.length + edgeLength > budget)
+                    state.markUnreachableCriticalVertex(targetVertex, parameters)
+
+            }
+        }
+        else {
+
+            // Checking neighbor vertices using incoming edges to see if any vertex cannot be reached
+            // within the path length budget using knowledge of the triangle inequality. Only apply
+            // this check to critical vertices
+
+            for (e in reducedGraph.incomingEdgesOf(state.vertex)) {
+
+                val sourceVertex = reducedGraph.getEdgeSource(e)
+                val edgeLength = reducedGraph.getEdgeWeight(e)
+
+                if (isCritical[sourceVertex] && state.length + edgeLength > budget)
+                    state.markUnreachableCriticalVertex(sourceVertex, parameters)
+            }
+
         }
 
     }

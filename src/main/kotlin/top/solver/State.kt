@@ -23,7 +23,7 @@ class State private constructor (
     val predecessor: Int,
     private val visitedCriticalVertices: LongArray,
     private val visitedGeneralVertices: LongArray,
-    private val numVerticesVisited: Int,
+    private val unreachableCriticalVertices: LongArray,
     val hasCycle : Boolean
 ) : Comparable<State>{
 
@@ -81,7 +81,7 @@ class State private constructor (
             predecessor = vertex,
             visitedCriticalVertices = newVisitedCriticalVertices,
             visitedGeneralVertices = newVisitedGeneralVertices,
-            numVerticesVisited = numVerticesVisited + 1,
+            unreachableCriticalVertices = unreachableCriticalVertices.copyOf(),
             hasCycle = newHasCycle
         )
     }
@@ -133,6 +133,14 @@ class State private constructor (
 
     }
 
+    fun markUnreachableCriticalVertex(vertex : Int, parameters : Parameters) {
+
+        val quotient : Int = vertex / parameters.numBits
+        val remainder : Int = vertex % parameters.numBits
+
+        unreachableCriticalVertices[quotient] = unreachableCriticalVertices[quotient] or (1L shl remainder)
+    }
+
     /**
      * Function that checks if this state dominates another given state.
      */
@@ -168,16 +176,12 @@ class State private constructor (
         // Checking visited vertices
         if (useVisitCondition) {
 
-            // Checking this state visited at most the same number of vertices as the other state
-            if (numVerticesVisited > otherState.numVerticesVisited)
-                return false
-
-            if (numVerticesVisited < otherState.numVerticesVisited)
-                strict = true
-
             for (i in visitedCriticalVertices.indices) {
 
-                if (visitedCriticalVertices[i] and otherState.visitedCriticalVertices[i].inv() != 0L)
+                val thisCombined = visitedCriticalVertices[i] or unreachableCriticalVertices[i]
+                val otherCombined = otherState.visitedCriticalVertices[i] or otherState.unreachableCriticalVertices[i]
+
+                if (thisCombined and otherCombined.inv() != 0L)
                     return false
 
                 if (!strict && (visitedCriticalVertices[i].inv() and otherState.visitedCriticalVertices[i] != 0L))
@@ -244,7 +248,7 @@ class State private constructor (
                 predecessor = -1,
                 visitedCriticalVertices = arrayOfLongs,
                 visitedGeneralVertices = arrayOfLongs,
-                numVerticesVisited = 1,
+                unreachableCriticalVertices = arrayOfLongs,
                 hasCycle = false)
         }
     }
