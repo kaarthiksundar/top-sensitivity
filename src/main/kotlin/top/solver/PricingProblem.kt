@@ -302,7 +302,7 @@ class PricingProblem(
         if (reducedCost >= - eps)
             return
 
-        // Admissible elementary route found
+        // Admissible route found
 
         if (!(forwardState.hasCycle || backwardState.hasCycle) && !forwardState.hasCommonGeneralVisits(backwardState)) {
             // Path is elementary
