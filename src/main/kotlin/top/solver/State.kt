@@ -181,9 +181,15 @@ class State private constructor (
                 val thisCombined = visitedCriticalVertices[i] or unreachableCriticalVertices[i]
                 val otherCombined = otherState.visitedCriticalVertices[i] or otherState.unreachableCriticalVertices[i]
 
+                // Checking if the current state's path has "used" a critical vertex that the other state's path has
+                // not "used", where "used" may mean either directly visited or has been made unreachable due to
+                // the path taken
                 if (thisCombined and otherCombined.inv() != 0L)
                     return false
 
+                // Checking if the current state's set of critical vertices VISITED is a proper subset of the
+                // other state's set of critical vertices. Here we use the visited critical vertices and so we
+                // do not need an extra parameter that tracks the number of critical vertices that have been visited
                 if (!strict && (visitedCriticalVertices[i].inv() and otherState.visitedCriticalVertices[i] != 0L))
                     strict = true
             }
