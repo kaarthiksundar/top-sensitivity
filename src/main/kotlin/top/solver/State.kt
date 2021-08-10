@@ -34,6 +34,8 @@ class State private constructor (
 
     var dominatingPredecessor : Int? = null
 
+    var isProcessed : Boolean = false
+
     /**
      * Create a new State object corresponding to extending the current State's path
      *

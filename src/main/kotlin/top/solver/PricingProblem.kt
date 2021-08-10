@@ -90,7 +90,6 @@ class PricingProblem(
      * Priority Queue of backward states to be joined with non-dominated forward states and extended
      */
     private var unprocessedBackwardStates = PriorityQueue<State>()
-
     /**
      * List of lists of non-dominated forward states indexed by the vertex ID
      */
@@ -100,7 +99,6 @@ class PricingProblem(
      * List of lists of non-dominated backward states indexed by the vertex ID
      */
     private val nonDominatedBackwardStates = List(numVertices) { mutableListOf<State>()}
-
     /**
      * Current optimal route (not necessarily elementary) found
      */
@@ -147,7 +145,8 @@ class PricingProblem(
             initializeIteration()
 
             // With the current critical vertex set, find all admissible elementary routes
-            interleavedSearch()
+            //interleavedSearch()
+            dssr()
 
             // Check if number of admissible elementary routes exceeds a set amount. If so, resolve RMP for new duals
             if (elementaryRoutes.size >= maxColumnsAdded) {
@@ -342,13 +341,16 @@ class PricingProblem(
      * Function that takes in a state (either forward or backward), checks if the path length does not exceed half the
      * budget and then performs the appropriate extension for that state.
      */
-    private fun processState(state: State) {
+    private fun processState(state: State, onExtend: (State) -> Unit) {
+
+        // Marking the state as having been processed so it is not extended more than once in the DSSR procedure
+        state.isProcessed = true
 
         if (state.length >= budget / 2 - eps)
             return
 
-        if (state.isForward) extendForward(state)
-        else extendBackward(state)
+        if (state.isForward) extendForward(state, onExtend)
+        else extendBackward(state, onExtend)
 
     }
 
@@ -374,7 +376,7 @@ class PricingProblem(
      * Function that finds all feasible extensions of a forward state and updates the lists of non-dominated
      * forward states and unprocessed forward states.
      */
-    private fun extendForward(currentState: State) {
+    private fun extendForward(currentState: State, onExtend: (State) -> Unit) {
         // Vertex corresponding to partial path of forward state
         val currentVertex = currentState.vertex
 
@@ -394,7 +396,7 @@ class PricingProblem(
             val extension = extendIfFeasible(currentState, newVertex, reducedGraph.getEdgeWeight(e)) ?: continue
 
             // Extension is feasible. Update unprocessed forward states
-            addIfNonDominated(extension, nonDominatedForwardStates[newVertex])
+            addIfNonDominated(extension, nonDominatedForwardStates[newVertex], onExtend)
         }
     }
 
@@ -402,7 +404,7 @@ class PricingProblem(
      * Function that finds all feasible extensions of a backward state and updates the lists of non-dominated
      * backward states and unprocessed backward states.
      */
-    private fun extendBackward(currentState: State) {
+    private fun extendBackward(currentState: State, onExtend: (State) -> Unit) {
         // Vertex corresponding to partial path of backward state
         val currentVertex = currentState.vertex
 
@@ -422,7 +424,7 @@ class PricingProblem(
             val extension = extendIfFeasible(currentState, newVertex, reducedGraph.getEdgeWeight(e)) ?: continue
 
             // Extension is feasible. Update unprocessed backward states
-            addIfNonDominated(extension, nonDominatedBackwardStates[newVertex])
+            addIfNonDominated(extension, nonDominatedBackwardStates[newVertex], onExtend)
         }
     }
 
@@ -457,7 +459,7 @@ class PricingProblem(
      * Function that checks if the a newly created state is dominated before adding it to the list of unprocessed
      * states.
      */
-    private fun addIfNonDominated(extension: State, existingStates: MutableList<State>) {
+    private fun addIfNonDominated(extension: State, existingStates: MutableList<State>, onExtend: (State) -> Unit) {
 
         // Updating unreachable critical vertices
         updateUnreachableVertices(extension)
@@ -491,6 +493,8 @@ class PricingProblem(
             unprocessedForwardStates.add(extension)
         else
             unprocessedBackwardStates.add(extension)
+
+        onExtend(extension)
     }
 
     private fun canRemoveDominated(dominating : State, dominated : State) : Boolean {
@@ -584,51 +588,46 @@ class PricingProblem(
 
     }
 
-    /**
-     * Function that runs the actual interleaved search algorithm to find admissible elementary routes.
-     */
-    private fun interleavedSearch() {
+    private fun dssr() {
 
-        // Finding initial set of unprocessed states from the terminal states
-        extendForward(State.buildTerminalState(isForward = true, vertex = source, numVertices = numVertices, parameters))
-        extendBackward(State.buildTerminalState(isForward = false, vertex = destination, numVertices = numVertices, parameters))
+        val candidateVertices = mutableSetOf<Int>(instance.source, instance.destination)
 
-        // Flag for which side to be extended
-        var processForward = true
+        while (candidateVertices.isNotEmpty()) {
 
-        while (unprocessedForwardStates.isNotEmpty() || unprocessedBackwardStates.isNotEmpty()) {
+            val vertex = candidateVertices.first()
 
-            // State to be extended
-            var state: State? = null
+            // Completing all forward extensions on states that have not yet been processed
+            for (state in nonDominatedForwardStates[vertex]) {
+                if (!state.isProcessed)
+                    processState(state) { candidateVertices.add(it.vertex) }
+            }
 
-            if (processForward) {
-                if (unprocessedForwardStates.isNotEmpty()) {
-                    state = unprocessedForwardStates.remove()
+            // Completing all backward extensions on states that have not yet been processed
+            for (state in nonDominatedBackwardStates[vertex]) {
+                if (!state.isProcessed)
+                    processState(state) { candidateVertices.add(it.vertex) }
+            }
+
+            candidateVertices.remove(vertex)
+
+        }
+
+        // All admissible labels have been generated. Performing all joins
+
+        for (e in reducedGraph.edgeSet()) {
+
+            for (fs in nonDominatedForwardStates[reducedGraph.getEdgeSource(e)]) {
+                for (bs in nonDominatedBackwardStates[reducedGraph.getEdgeTarget(e)]) {
+                    // Joining each forward and backward state
+                    join(fs, bs)
+
+                    if (elementaryRoutes.size >= maxColumnsAdded) {
+                        stopSearch = true
+                        return
+                    }
                 }
             }
-            else {
-                if(unprocessedBackwardStates.isNotEmpty()) {
-                    state = unprocessedBackwardStates.remove()
-                }
-            }
 
-            // Switching sides
-            processForward = !processForward
-
-            // Switching sides if one side has no states to extend
-            if (state == null)
-                continue
-
-            // Finding all possible joins
-            performAllJoins(state)
-
-            if (elementaryRoutes.size >= maxColumnsAdded) {
-                stopSearch = true
-                return
-            }
-
-            // Max number of elementary routes not yet found, so extend the state
-            processState(state)
         }
     }
 
