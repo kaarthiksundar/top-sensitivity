@@ -4,7 +4,6 @@ import top.data.Instance
 import top.data.Parameters
 import top.data.Route
 import top.main.getEdgeWeight
-import java.util.*
 import kotlin.math.absoluteValue
 import mu.KLogging
 import top.main.SetGraph
@@ -80,16 +79,6 @@ class PricingProblem(
      * Maximum number of elementary routes generated when solving the pricing problem
      */
     private val maxColumnsAdded = parameters.maxColumnsAdded
-
-    /**
-     * Priority Queue of forward states to be joined with non-dominated backward states and extended
-     */
-    private var unprocessedForwardStates = PriorityQueue<State>()
-
-    /**
-     * Priority Queue of backward states to be joined with non-dominated forward states and extended
-     */
-    private var unprocessedBackwardStates = PriorityQueue<State>()
     /**
      * List of lists of non-dominated forward states indexed by the vertex ID
      */
@@ -125,6 +114,8 @@ class PricingProblem(
      * standard domination conditions are used.
      */
     private var useVisitCondition = false
+
+    private var hasCriticalVertices = false
 
     /**
      * Function that performs I-DSSR to find elementary routes to add to the set cover model formulation in the RMP.
@@ -229,6 +220,7 @@ class PricingProblem(
             numVisits[vertex]++
             if (numVisits[vertex] > 1) {
                 isVisitedMultipleTimes[vertex] = true
+                hasCriticalVertices = true
                 // Checking that critical vertices are visited at most once
                 if (isCritical[vertex]) {
                     logger.error("Multiple visits to critical vertex $vertex")
@@ -237,51 +229,8 @@ class PricingProblem(
                 }
             }
         }
-        val multipleVisits = (0 until numVertices).filter { isVisitedMultipleTimes[it] }
-        logger.debug("Current multiple visits: $multipleVisits")
-    }
-
-    /**
-     * Function that takes a forward (backward) state and joins it with all feasible backward (forward) non-dominated
-     * states
-     */
-    private fun performAllJoins(currentState: State) {
-        val currentVertex = currentState.vertex
-
-        // Joining forward state with all non-dominated backward states
-        if (currentState.isForward) {
-            for (e in reducedGraph.outgoingEdgesOf(currentVertex)) {
-
-                val nextVertex = reducedGraph.getEdgeTarget(e)
-
-                for (backwardState in nonDominatedBackwardStates[nextVertex]) {
-
-                    // Attempting to join
-                    join(currentState, backwardState)
-
-                    // Checking if max number of elementary routes reached
-                    if (elementaryRoutes.size >= maxColumnsAdded)
-                        return
-                }
-
-            }
-        }
-        else { // Joining backward state with all non-dominated forward states
-            for (e in reducedGraph.incomingEdgesOf(currentVertex)) {
-
-                val previousVertex = reducedGraph.getEdgeSource(e)
-
-                for (forwardState in nonDominatedForwardStates[previousVertex]) {
-
-                    // Attempting to join
-                    join(forwardState, currentState)
-
-                    // Checking if max number of elementary routes reached
-                    if (elementaryRoutes.size >= maxColumnsAdded)
-                        return
-                }
-            }
-        }
+        //val multipleVisits = (0 until numVertices).filter { isVisitedMultipleTimes[it] }
+        //logger.debug("Current multiple visits: $multipleVisits")
     }
 
     /**
@@ -462,7 +411,8 @@ class PricingProblem(
     private fun addIfNonDominated(extension: State, existingStates: MutableList<State>, onExtend: (State) -> Unit) {
 
         // Updating unreachable critical vertices
-        updateUnreachableVertices(extension)
+        if (hasCriticalVertices)
+            updateUnreachableVertices(extension)
 
         // Iterating over the existing states in reversed order. Iterating backwards leads to large speed improvements
         // when removing states in the list of existing non-dominated states since there is no concern of skipping
@@ -489,10 +439,10 @@ class PricingProblem(
         existingStates.add(extension)
 
         // Updating the unprocessed states
-        if (extension.isForward)
-            unprocessedForwardStates.add(extension)
-        else
-            unprocessedBackwardStates.add(extension)
+        //if (extension.isForward)
+        //    unprocessedForwardStates.add(extension)
+        //else
+        //    unprocessedBackwardStates.add(extension)
 
         onExtend(extension)
     }
@@ -590,7 +540,7 @@ class PricingProblem(
 
     private fun dssr() {
 
-        val candidateVertices = mutableSetOf<Int>(instance.source, instance.destination)
+        val candidateVertices = mutableSetOf<Int>(source, destination)
 
         while (candidateVertices.isNotEmpty()) {
 
