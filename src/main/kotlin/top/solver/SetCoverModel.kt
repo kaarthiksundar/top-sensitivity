@@ -84,6 +84,8 @@ class SetCoverModel(private var cplex: IloCplex) {
      * @param instance object with all routing problem data
      * @param routes routes to use as decision variables in set cover model
      * @param asMIP model is solved as MIP if this flag is true, and LP otherwise
+     * @param mustVisitVertices Array of vertices enforced to be visited
+     * @param mustVisitEdges List of edges enforced to be used
      */
     fun createModel(
         instance: Instance,
@@ -101,6 +103,11 @@ class SetCoverModel(private var cplex: IloCplex) {
          *   Creates an empty linear expression for routes. This will be used for constraint (2).
          */
         val routeExpression: IloLinearNumExpr = cplex.linearNumExpr()
+
+        /**
+         * Auxiliary variable used to detect if a problem is infeasible
+         */
+        auxiliaryVariable = cplex.numVar(0.0, Double.MAX_VALUE, IloNumVarType.Float)
 
         /**
          *   List of routes.
@@ -152,6 +159,7 @@ class SetCoverModel(private var cplex: IloCplex) {
         /**
          *  SETTING THE OBJECTIVE
          */
+        objectiveExpression.addTerm(-100000.0, auxiliaryVariable)
         cplex.addMaximize(objectiveExpression)
 
         /**
@@ -202,6 +210,44 @@ class SetCoverModel(private var cplex: IloCplex) {
         /**
          * CONSTRAINT (3) ALREADY HANDLED IN CREATION OF THE ROUTE VARIABLES.
          */
+
+        /**
+         * Additional constraints for must visit vertices.
+         */
+        mustVisitVertices.forEach {
+            val expr : IloLinearNumExpr = cplex.linearNumExpr()
+            vertexRoutes[it].forEach {
+                it1 -> expr.addTerm(1.0, routeVariable[it1])
+            }
+            expr.addTerm(1.0, auxiliaryVariable)
+            mustVisitVertexConstraintId[it] = constraints.size
+            constraints.add(cplex.addGe(expr, 1.0, "must_visit_target_$it"))
+        }
+
+        /**
+         * Additional constraints for must use edges.
+         */
+
+        // Finding which routes in the set cover model use each edge
+        val edgeRoutes = mustVisitEdges.map { it to mutableListOf<Int>()}.toMap()
+        mustVisitEdges.forEach {
+            for (i in routes.indices) {
+                if (it in routes[i].path.zipWithNext())
+                    edgeRoutes.getValue(it).add(i)
+            }
+        }
+
+        // Making the constraints
+        mustVisitEdges.forEach{
+            val expr: IloLinearNumExpr = cplex.linearNumExpr()
+            edgeRoutes.getValue(it).forEach{
+                it1 -> expr.addTerm(1.0, routeVariable[it1])
+            }
+            expr.addTerm(1.0, auxiliaryVariable)
+            mustVisitEdgeConstraintId[it] = constraints.size
+            constraints.add(cplex.addGe(expr, 1.0, "must_visit_edge_${it.first}_${it.second}"))
+        }
+
     }
 
     /**
@@ -227,9 +273,23 @@ class SetCoverModel(private var cplex: IloCplex) {
     }
 
     /**
+     * Function that returns the value of the auxiliary variable used to determine if the LP is infeasible.
+     */
+    fun getAuxiliaryVariableSolution() : Double {
+        return cplex.getValue(auxiliaryVariable)
+    }
+
+    /**
      * Function that returns the dual of the fleet size constraint
      */
     fun getRouteDual(): Double = cplex.getDual(constraints[routeConstraintId])
+
+    /**
+     * Function that returns a list of the duals associated with each route decision variable.
+     */
+    fun getRouteVariableDuals() : List<Double> = (0 until routeVariable.size).map {
+        cplex.getReducedCost(routeVariable[it])
+    }
 
     /**
      * Function that returns the duals for the vertex covering constraints
@@ -237,7 +297,6 @@ class SetCoverModel(private var cplex: IloCplex) {
     fun getVertexDuals(): List<Double> = (0 until vertexCoverConstraintId.size).map {
         if (vertexCoverConstraintId[it] != null)
             cplex.getDual(constraints[vertexCoverConstraintId[it]!!]) else 0.0
-
     }
 
     /**

@@ -1,9 +1,14 @@
 package top.solver
 
+import mu.KLogging
 import ilog.cplex.IloCplex
 import top.data.Instance
 import top.data.Parameters
 import top.data.Route
+import top.main.SetGraph
+import top.main.TOPException
+import top.main.getCopy
+import kotlin.math.max
 
 
 /**
@@ -14,11 +19,19 @@ import top.data.Route
  * @param instance [Instance] object containing relevant problem information
  * @param cplex [IloCplex] object containing the CPLEX model of the set cover model
  * @param parameters [Parameters] object containing relevant information for the solver
+ * @param mustVisitVertices Array of vertices enforced to be visited by at least one vehicle
+ * @param mustVisitEdges List of edges enforced to be used by at least one vehicle
+ * @param forbiddenVertices Array of vertices forbidden to be visited by any vehicle
+ * @param forbiddenEdges List of edges forbidden to be used by any vehicle
  */
 class ColumnGenerationSolver(
     private val instance: Instance,
     private val cplex: IloCplex,
-    private val parameters: Parameters
+    private val parameters: Parameters,
+    private val mustVisitVertices : IntArray = intArrayOf(),
+    private val mustVisitEdges : List<Pair<Int, Int>> = listOf(),
+    private val forbiddenVertices : IntArray = intArrayOf(),
+    private val forbiddenEdges : List<Pair<Int, Int>> = listOf()
 ) {
     /**
      * Routes to use in the set cover model
@@ -33,7 +46,8 @@ class ColumnGenerationSolver(
     /**
      * List of reduced costs from the dual values of the linear relaxation of the set cover model
      */
-    private var vertexReducedCosts = MutableList(instance.numVertices) { 0.0 }
+    var vertexReducedCosts = MutableList(instance.numVertices) { 0.0 }
+        private set
 
     /**
      * 2D List of duals for enforced edges. 0.0 by default.
@@ -47,20 +61,59 @@ class ColumnGenerationSolver(
         private set
 
     /**
+     * Boolean indicating whether the node's relaxed master problem has been solved to optimality.
+     */
+    var lpOptimal = false
+        private set
+
+    /**
+     * Boolean indicating whether the node's relaxed master problem is infeasible.
+     */
+    var lpInfeasible = true
+        private set
+
+    /**
+     * Objective value when solving the relaxed master problem as a MIP
+     */
+    var mipObjective = 0.0
+        private set
+
+    /**
+     * Solution when solving the relaxed master problem as a MIP
+     */
+    var mipSolution = listOf<Route>()
+        private set
+
+    /**
+     * Boolean indicating whether the node's relaxed master problem's solution is integer-valued (within an accepted
+     * tolerance epsilon defined in [Parameters])
+     */
+    var lpIntegral = false
+        private set
+
+    /**
+     * Upper bound on the dual of the relaxed master problem when the right-hand side of the relaxed master problem
+     * is modified. The modification may be a change in the fleet size, removing vertices from the graph, or both.
+     */
+    var dualLPUpperBound = Double.POSITIVE_INFINITY
+        private set
+
+    /**
      * List of pairs of Route objects and the corresponding value of the route variable for the
      * linear relaxation of the set cover model.
      */
     var lpSolution = mutableListOf<Pair<Route, Double>>()
 
     /**
-     * Solve master problem (linear relaxation for set cover model) using column generation.
+     * Solve linear relaxation of the set cover model for the current node using column generation.
      */
     fun solve() {
         var columnGenIteration = 0
+        val reducedGraph = generateReducedGraph()
         while (true) {
 
-            println("Column Generation Iteration: $columnGenIteration")
-            println("Number of Routes: ${routes.size}")
+            logger.info("Column Generation Iteration: $columnGenIteration")
+            logger.info("Number of Routes: ${routes.size}")
 
             // Solving the restricted master problem
             solveRestrictedMasterProblem()
@@ -68,6 +121,7 @@ class ColumnGenerationSolver(
             // Solving the pricing problem to generate columns to add to the restricted master problem
             val newRoutes = PricingProblem(
                 instance,
+                reducedGraph,
                 vehicleCoverDual,
                 vertexReducedCosts,
                 edgeDuals,
@@ -76,7 +130,9 @@ class ColumnGenerationSolver(
 
             if (newRoutes.isEmpty()) {
                 // No more columns to add. LP optimal solution has been found
-                println("LP Optimal Solution Found")
+                logger.info("LP Optimal Solution Found")
+                logger.info("LP Objective: $lpObjective")
+                lpOptimal = true
                 break
             } else {
                 // LP optimal solution still not found. Adding routes to set cover model
@@ -84,46 +140,161 @@ class ColumnGenerationSolver(
                 columnGenIteration++
             }
         }
+        // Finished solving the master problem associated with the current node
+
+        // If the LP is feasible, solve the MIP in order to get a better lower bound
+        if (!lpInfeasible)
+            solveRestrictedMasterProblem(asMIP = true)
+
+        // Checking if the LP's solution is integer-valued
+        lpIntegral = true
+        for (sol in lpSolution) {
+            if (sol.second >= parameters.eps && 1 - sol.second >= parameters.eps) {
+                lpIntegral = false
+                break
+            }
+        }
     }
 
     /**
      * Solve restricted master problem (linear relaxation of the set cover model using a subset
      * of all feasible routes).
+     *
+     * @param asMIP Boolean indicating whether to solve the RMP as a MIP for a tighter lower bound
      */
-    private fun solveRestrictedMasterProblem() {
+    private fun solveRestrictedMasterProblem(asMIP : Boolean = false) {
+
         // Creating the restricted master problem and solving
         val setCoverModel = SetCoverModel(cplex)
-        setCoverModel.createModel(instance, routes)
+        setCoverModel.createModel(
+            instance = instance,
+            routes = routes,
+            asMIP = asMIP,
+            mustVisitVertices = mustVisitVertices,
+            mustVisitEdges = mustVisitEdges)
         setCoverModel.solve()
 
-        // Collect dual variable corresponding to the number of vehicles constraint.
-        vehicleCoverDual = setCoverModel.getRouteDual()
+        if (asMIP) {
 
-        // Collect reduced costs of each vertex given the dual and prizes.
-        val vertexDuals = setCoverModel.getVertexDuals()
-        for (i in 0 until instance.numVertices) {
-            vertexReducedCosts[i] = vertexDuals[i] - instance.scores[i]
-        }
-
-        // Updating the reduced costs by duals for enforced vertices
-        for ((vertex, dual) in setCoverModel.getMustVisitVertexDuals()) {
-            vertexReducedCosts[vertex] += dual
-        }
-
-        // Storing duals of enforced edges. Used in the pricing problem
-        edgeDuals.forEach{it.fill(0.0)} // Resetting
-        for ((edge, dual) in setCoverModel.getMustVisitEdgeDuals())
-            edgeDuals[edge.first][edge.second] = dual
-
-        // Update LP solution values.
-        lpObjective = setCoverModel.objective
-        lpSolution.clear()
-        val setCoverSolution = setCoverModel.getSolution()
-        for (i in setCoverSolution.indices) {
-            if (setCoverSolution[i] >= parameters.eps) {
-                lpSolution.add(Pair(routes[i], setCoverSolution[i]))
+            // Collecting the MIP solution
+            mipObjective = setCoverModel.objective
+            logger.debug("MIP Objective: $mipObjective")
+            val setCoverSolution = setCoverModel.getSolution()
+            val selectedRoutes = mutableListOf<Route>()
+            for (i in setCoverSolution.indices) {
+                // Checking if the value is effectively non-zero
+                if (setCoverSolution[i] >= parameters.eps)
+                    selectedRoutes.add(routes[i])
             }
+            mipSolution = selectedRoutes
         }
+        else {
+            // Collect dual variable corresponding to the number of vehicles constraint.
+            vehicleCoverDual = setCoverModel.getRouteDual()
+
+            // Collect reduced costs of each vertex given the dual and prizes.
+            val vertexDuals = setCoverModel.getVertexDuals()
+            for (i in 0 until instance.numVertices) {
+                vertexReducedCosts[i] = vertexDuals[i] - instance.scores[i]
+            }
+
+            // Updating the reduced costs by duals for enforced vertices
+            for ((vertex, dual) in setCoverModel.getMustVisitVertexDuals()) {
+                vertexReducedCosts[vertex] += dual
+            }
+
+            // Storing duals of enforced edges. Used in the pricing problem
+            edgeDuals.forEach { it.fill(0.0) } // Resetting
+            for ((edge, dual) in setCoverModel.getMustVisitEdgeDuals())
+                edgeDuals[edge.first][edge.second] = dual
+
+            // Update LP solution values.
+            lpObjective = setCoverModel.objective
+            lpSolution.clear()
+            val setCoverSolution = setCoverModel.getSolution()
+            for (i in setCoverSolution.indices) {
+                if (setCoverSolution[i] >= parameters.eps) {
+                    lpSolution.add(Pair(routes[i], setCoverSolution[i]))
+                }
+            }
+
+            // Checking if the LP is infeasible by examining the value of the auxiliary variable
+            lpInfeasible = setCoverModel.getAuxiliaryVariableSolution() >= parameters.eps
+
+            // Updating dual LP upper bound. When LP infeasible, duals used are from Phase I of Simplex
+            updateDualUpperBound(setCoverModel)
+        }
+
         cplex.clearModel()
     }
+
+    /**
+     * Removes forbidden vertices and forbidden edges resulting from the
+     * branch-and-bound procedure.
+     *
+     * @return reducedGraph Graph with forbidden vertices and edges removed
+     */
+    private fun generateReducedGraph() : SetGraph {
+
+        val reducedGraph = instance.graph.getCopy()
+
+        // Removing forbidden vertices (removes incident edges as well)
+        for (vertex in forbiddenVertices) {
+
+            // Checking the vertex exists. If so, remove.
+            if (reducedGraph.containsVertex(vertex))
+                reducedGraph.removeVertex(vertex)
+            else if (!instance.graph.containsVertex(vertex))
+                throw TOPException("Attempting to remove non-existent vertex $vertex from graph")
+        }
+
+        // Removing forbidden edges
+        for (edge in forbiddenEdges) {
+
+            // Checking the edge exists. If so, remove.
+            if (reducedGraph.containsEdge(edge.first, edge.second))
+                reducedGraph.removeEdge(edge.first, edge.second)
+            else if (!instance.graph.containsEdge(edge.first, edge.second))
+                throw TOPException("Attempting to remove non-existent arc $edge from graph")
+
+        }
+
+        return reducedGraph
+    }
+
+    /**
+     * Computes the dual upper bound (C^t in the paper) using the duals from solving the relaxed MP associated
+     * with the current node to optimality.
+     */
+    private fun updateDualUpperBound(setCoverModel: SetCoverModel) {
+
+        dualLPUpperBound = 0.0
+
+        // Adding dual variables for vertex cover constraints
+        val vertexDuals = setCoverModel.getVertexDuals()
+        dualLPUpperBound += setCoverModel.getVertexDuals().sum()
+
+        for (vertex in parameters.verticesToRemove) {
+            dualLPUpperBound -= vertexDuals[vertex]
+        }
+
+        // Duals corresponding to enforced vertices
+        for ((_, dual) in setCoverModel.getMustVisitVertexDuals()) {
+            dualLPUpperBound -= dual
+        }
+
+        // Duals corresponding to enforced arcs
+        for ((_, dual) in setCoverModel.getMustVisitEdgeDuals()) {
+            dualLPUpperBound -= dual
+        }
+
+        // Dual term corresponding to fleet size constraint
+        dualLPUpperBound += setCoverModel.getRouteDual() * parameters.adjustedFleetSize
+
+        for (routeVariableDual in setCoverModel.getRouteVariableDuals()) {
+            dualLPUpperBound += max(routeVariableDual, 0.0)
+        }
+    }
+
+    companion object : KLogging()
 }

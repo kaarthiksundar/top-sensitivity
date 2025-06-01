@@ -2,6 +2,7 @@ package top.main
 
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.default
+import com.github.ajalt.clikt.parameters.options.multiple
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.validate
 import com.github.ajalt.clikt.parameters.types.int
@@ -50,16 +51,24 @@ class CliParser : CliktCommand() {
     }
 
     /**
-     * Algorithm selection
+     * New fleet size used in sensitivity analysis
      */
-    val algorithm: Int by option(
-        "-a",
-        help = "0 for enumeration 1 for B&P"
-    ).int().default(0).validate{
-        require(it == 0 || it == 1){
-            "Algorithm options are 0 (enumeration) and 1 (B&P)"
+    val adjustedFleetSize : Int by option(
+        "-f",
+        help= "New fleet size used in sensitivity analysis"
+    ).int().default(3).validate {
+        require(it > 0) {
+            "Fleet size should be a strictly positive integer"
         }
     }
+
+    /**
+     * List of vertices to be removed in sensitivity analysis
+     */
+    val verticesToRemove : List<Int> by option(
+        "-v",
+        help="List of vertices to be removed in sensitivity analysis"
+    ).int().multiple()
 
     override fun run() {
         log.debug("reading command line arguments...")

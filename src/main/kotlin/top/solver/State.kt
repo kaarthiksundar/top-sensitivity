@@ -12,7 +12,6 @@ import top.main.TOPException
  * @param score Accumulated prize collected
  * @param length Length of the path
  * @param parent Previous state that was extended to create this state. Null for source vertex.
- * @param visitedVertices Array of Longs representing if a vertex has been visited or not.
  */
 class State private constructor (
     val isForward: Boolean,
@@ -21,7 +20,11 @@ class State private constructor (
     val score: Double,
     val length: Double,
     val parent: State?,
-    val visitedVertices: LongArray
+    private val visitedCriticalVertices: LongArray,
+    private val unreachableCriticalVertices: LongArray,
+    private val visitedGeneralVertices: LongArray,
+    private val numVerticesVisited: Int,
+    val hasCycle : Boolean
 ) : Comparable<State>{
 
     /**
@@ -44,10 +47,29 @@ class State private constructor (
         edgeCost: Double,
         edgeLength: Double,
         newVertexScore: Double,
+        isCritical: Boolean,
         parameters: Parameters
     ): State {
-        val newVisitedVertices = visitedVertices.copyOf()
-        markVertex(newVertex, newVisitedVertices, parameters)
+        val newVisitedCriticalVertices = visitedCriticalVertices.copyOf()
+        // Only marking critical vertices
+        if (isCritical)
+            markVisited(newVertex, newVisitedCriticalVertices, parameters)
+
+
+
+        // Updating which vertices have been visited regardless if they are critical
+        var newHasCycle = hasCycle
+        val newVisitedGeneralVertices = visitedGeneralVertices.copyOf()
+        if (!hasCycle && usedGeneralVertex(newVertex, parameters)) {
+            // New vertex has already been previously used in this path, so mark the new state as having a cycle
+            newHasCycle = true
+        }
+        else {
+            // New vertex hasn't been previously used in the partial path. Mark this new vertex as used.
+            markVisited(newVertex, newVisitedGeneralVertices, parameters)
+        }
+
+
 
         return State(
             isForward,
@@ -56,8 +78,17 @@ class State private constructor (
             score = score + newVertexScore,
             length = length + edgeLength,
             parent = this,
-            visitedVertices = newVisitedVertices
+            visitedCriticalVertices = newVisitedCriticalVertices,
+            unreachableCriticalVertices = unreachableCriticalVertices.copyOf(),
+            visitedGeneralVertices = newVisitedGeneralVertices,
+            numVerticesVisited = numVerticesVisited + 1,
+            hasCycle = newHasCycle
         )
+    }
+
+    override fun toString(): String {
+        val typeStr = if (isForward) "forward" else "backward"
+        return "State($typeStr,v=$vertex,l=$length,s=$score,r=$cost)"
     }
 
     /**
@@ -75,16 +106,27 @@ class State private constructor (
     }
 
     /**
-     * Function that checks if this state and another given state share visited vertices. True if yes, false otherwise.
+     * Function that checks if this state and another given state share visited critical vertices.
      */
-    fun hasCommonVisits(otherState: State) : Boolean {
+    fun hasCommonCriticalVisits(otherState: State) : Boolean {
 
-        for (i in visitedVertices.indices) {
+        for (i in visitedCriticalVertices.indices) {
 
             // Checking the AND operation yields 0L (i.e., checking if a vertex is shared)
-            if (visitedVertices[i] and otherState.visitedVertices[i] != 0L) {
+            if (visitedCriticalVertices[i] and otherState.visitedCriticalVertices[i] != 0L) {
                 return true
             }
+        }
+
+        return false
+
+    }
+
+    fun hasCommonGeneralVisits(otherState: State) : Boolean {
+
+        for (i in visitedGeneralVertices.indices) {
+            if (visitedGeneralVertices[i] and otherState.visitedGeneralVertices[i] != 0L)
+                return true
         }
 
         return false
@@ -94,7 +136,7 @@ class State private constructor (
     /**
      * Function that checks if this state dominates another given state.
      */
-    fun dominates(otherState: State, parameters: Parameters) : Boolean {
+    fun dominates(otherState: State, parameters: Parameters, useVisitCondition: Boolean) : Boolean {
 
         // States can only be compared if they have a partial path ending at the same vertex
         if (vertex != otherState.vertex)
@@ -124,19 +166,33 @@ class State private constructor (
             strict = true
 
         // Checking visited vertices
-        for (i in visitedVertices.indices) {
-            if (visitedVertices[i] > otherState.visitedVertices[i])
+        if (useVisitCondition) {
+
+            // Checking this state visited at most the same number of vertices as the other state
+            if (numVerticesVisited > otherState.numVerticesVisited)
                 return false
 
-            if (visitedVertices[i] < otherState.visitedVertices[i])
+            if (numVerticesVisited < otherState.numVerticesVisited)
                 strict = true
+
+            for (i in visitedCriticalVertices.indices) {
+
+                val thisCombined = visitedCriticalVertices[i] or unreachableCriticalVertices[i]
+                val otherCombined = otherState.visitedCriticalVertices[i] or otherState.unreachableCriticalVertices[i]
+
+                if (thisCombined and otherCombined.inv() != 0L)
+                    return false
+
+                if (!strict && (thisCombined.inv() and otherCombined != 0L))
+                    strict = true
+            }
         }
 
         return strict
 
     }
 
-    fun markVertex(vertex: Int, visitedVertices: LongArray, parameters: Parameters) {
+    private fun markVisited(vertex: Int, visitedVertices: LongArray, parameters: Parameters) {
 
         // Finding which set of n bits to update
         val quotient : Int = vertex / parameters.numBits
@@ -149,13 +205,35 @@ class State private constructor (
 
     }
 
-    fun inPartialPath(vertex: Int, parameters: Parameters) : Boolean {
+    fun markCriticalVertexUnreachable(vertex: Int, parameters: Parameters) {
+
+        // Finding which set of n bits to update
+        val quotient : Int = vertex / parameters.numBits
+
+        // Finding which bit in the set of n bits to update
+        val remainder : Int = vertex % parameters.numBits
+
+        // Updating
+        unreachableCriticalVertices[quotient] = unreachableCriticalVertices[quotient] or (1L shl remainder)
+
+    }
+
+    fun usedCriticalVertex(vertex: Int, parameters: Parameters) : Boolean {
 
         val quotient : Int = vertex / parameters.numBits
         val remainder : Int = vertex % parameters.numBits
 
-        return visitedVertices[quotient] and (1L shl remainder) != 0L
+        val combined = visitedCriticalVertices[quotient] or unreachableCriticalVertices[quotient]
 
+        return combined and (1L shl remainder) != 0L
+
+    }
+
+    private fun usedGeneralVertex(vertex: Int, parameters: Parameters) : Boolean {
+        val quotient : Int = vertex / parameters.numBits
+        val remainder : Int = vertex % parameters.numBits
+
+        return visitedGeneralVertices[quotient] and (1L shl remainder) != 0L
     }
 
     companion object {
@@ -175,7 +253,18 @@ class State private constructor (
 
             arrayOfLongs[quotient] = 1L shl remainder
 
-            return State(isForward, vertex, 0.0, 0.0, 0.0, null, LongArray(numberOfLongs) {0L})
+            return State(
+                isForward = isForward,
+                vertex = vertex,
+                cost = 0.0,
+                score = 0.0,
+                length = 0.0,
+                parent = null,
+                visitedCriticalVertices = arrayOfLongs,
+                unreachableCriticalVertices = LongArray(numberOfLongs) {0L},
+                visitedGeneralVertices = arrayOfLongs,
+                numVerticesVisited = 1,
+                hasCycle = false)
         }
     }
 
